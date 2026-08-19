@@ -24,3 +24,8 @@ smoke_test.db
 .mimosa/
 .idea/
 no_such_models_dir/
+
+# 前端依赖与构建产物
+frontend/node_modules/
+frontend/static/
+frontend/dist/
