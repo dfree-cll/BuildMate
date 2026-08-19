@@ -1,4 +1,4 @@
-"""采购审批 Agent 提示词（对标 EduAgent 6：规则引擎 + LLM 审查双轨）"""
+"""采购审批 Agent 提示词"""
 
 # LLM 审查：合规性 + 合理性
 LLM_REVIEW_PROMPT = """你是采购审核专家。请审查以下采购单，输出 JSON：

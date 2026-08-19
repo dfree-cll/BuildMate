@@ -1,4 +1,4 @@
-"""灌入知识库文档（RAG 用）— 对齐 EduAgent 05-03 智能分块（MarkdownHeaderTextSplitter + MarkdownTextSplitter 两阶段）
+"""灌入知识库文档（RAG 用）— 对齐行业范式-03 智能分块（MarkdownHeaderTextSplitter + MarkdownTextSplitter 两阶段）
 扫描目录：
   data/knowledge      模拟/示例知识库
   data/knowledge_real 公开数据网抓取的真实知识库（法规/规范）
@@ -27,7 +27,7 @@ _MD_HEADER_SPLITTER = MarkdownHeaderTextSplitter(
 
 def split_markdown_documents(text: str, source: str, chunk_size: int = 1200,
                              chunk_overlap: int = 100) -> list[dict]:
-    """对标 EduAgent 05-03：按标题语义切分 + 超长块二次切分"""
+    """对标行业范式-03：按标题语义切分 + 超长块二次切分"""
     splitter = MarkdownTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
     header_chunks = _MD_HEADER_SPLITTER.split_text(text)
     for c in header_chunks:
@@ -66,7 +66,7 @@ async def main():
             await add_chunks(chunks, tenant_id=settings.default_tenant_id)
             total += len(chunks)
             print(f"  {fp.name}: {len(chunks)} chunks")
-    print(f"✅ 知识库灌入完成，共 {total} 个 chunk（对齐 EduAgent 两阶段分块）")
+    print(f"✅ 知识库灌入完成，共 {total} 个 chunk")
 
 
 if __name__ == "__main__":

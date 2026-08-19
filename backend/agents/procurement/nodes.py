@@ -1,4 +1,4 @@
-"""采购审批 Agent 节点（对标 EduAgent 6：三轨并行 + HitL interrupt/resume）
+"""采购审批 Agent 节点
 parallel_review（规则引擎 + LLM 双轨 asyncio.gather）→ merge → [interrupt 人工审批] → publish
 """
 import asyncio
@@ -18,7 +18,7 @@ from sqlalchemy import text
 logger = get_logger(__name__)
 
 
-# ── 规则引擎（对标 EduAgent 6.5 客观题规则）──────────────────
+# ── 规则引擎──────────────────
 THRESHOLD_HIGH = 5000.0   # 材料单价红线（元/吨）
 THRESHOLD_AMOUNT = 100000.0  # 大额采购线（元）
 
@@ -57,7 +57,7 @@ async def _llm_review(state: ProcurementState) -> dict:
 
 
 async def parallel_review_node(state: ProcurementState) -> dict:
-    """三轨并行：规则引擎 + LLM 审查（asyncio.gather，对标 EduAgent 6.5-6.7）"""
+    """三轨并行：规则引擎 + LLM 审查（asyncio.gather，对标行业范式-6.7）"""
     rule_result = _run_rule_engine(state)
     llm_result = await _llm_review(state)
     logger.info("procurement.parallel_done",
@@ -66,7 +66,7 @@ async def parallel_review_node(state: ProcurementState) -> dict:
 
 
 async def merge_node(state: ProcurementState) -> dict:
-    """合并双轨结论（对标 EduAgent 6.8 三轨组装）"""
+    """合并双轨结论"""
     rule = state.get("rule_result", {})
     llm = state.get("llm_result", {})
     llm_verdict = llm.get("verdict", "pass")
@@ -91,7 +91,7 @@ async def merge_node(state: ProcurementState) -> dict:
 
 
 async def human_in_the_loop_node(state: ProcurementState) -> dict:
-    """HitL：interrupt 冻结等待人工审批（对标 EduAgent 6.9）
+    """HitL：interrupt 冻结等待人工审批
     小额低风险（<1万且双轨均 pass）自动通过；否则 interrupt 人工审批
     """
     conclusion = state.get("ai_conclusion", {})
@@ -120,7 +120,7 @@ async def human_in_the_loop_node(state: ProcurementState) -> dict:
         "final_verdict": final_verdict,
         "final_comment": decision.get("comment", ""),
     }
-    # modify 分支：教师改单（改数量/单价 → 重算金额），对齐 EduAgent 6.10 modify 决策
+    # modify 分支：教师改单（改数量/单价 → 重算金额），对齐行业范式 modify 决策
     if final_verdict == "modify":
         new_qty = decision.get("new_quantity")
         new_price = decision.get("new_unit_price")
@@ -140,7 +140,7 @@ async def human_in_the_loop_node(state: ProcurementState) -> dict:
 
 
 async def publish_node(state: ProcurementState) -> dict:
-    """发布：写库 + 生成批复文案（对标 EduAgent 6.10 合并发布）"""
+    """发布：写库 + 生成批复文案"""
     decision = state.get("teacher_decision", {})
     final_verdict = state.get("final_verdict", "rejected")
     comment = state.get("final_comment", "")

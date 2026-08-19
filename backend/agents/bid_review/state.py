@@ -1,4 +1,4 @@
-"""投标文件审查 Agent 状态（对标 EduAgent 4 简历审查范式）
+"""投标文件审查 Agent 状态
 直线流水线：解析 → 结构化提取 → 四维并行评审 → 问题诊断 → 整体评价
 """
 from typing import Annotated, Optional

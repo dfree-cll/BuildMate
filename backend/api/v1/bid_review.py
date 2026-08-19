@@ -1,4 +1,4 @@
-"""标书审查 Agent REST 接口（对标 EduAgent 4.8/4.9 简历审查范式）"""
+"""标书审查 Agent REST 接口"""
 import asyncio
 import json
 import uuid
@@ -19,7 +19,7 @@ class BidReviewBody(BaseModel):
 
 
 # ── 投标审查 ──────────────────────────────────────────────
-# ── 投标审查（后台任务 + 轮询，对标 EduAgent 4.8/4.9 简历审查范式）──
+# ── 投标审查（后台任务 + 轮询，对标行业范式/4.9 简历审查范式）──
 _bid_tasks: set = set()          # 后台任务 GC 保护
 
 
@@ -66,7 +66,7 @@ def _on_bid_task_done(task):
 
 @router.post("/bid-review/upload", status_code=202, dependencies=[Depends(llm_rate_limit)])
 async def bid_review_upload(file: UploadFile, current_user: dict = Depends(get_current_user)):
-    """上传投标 PDF → 解析文本 → 后台四维评审（对齐 EduAgent 4.8：PDF 上传 + 202）"""
+    """上传投标 PDF → 解析文本 → 后台四维评审"""
     import tempfile
     import os
     MAX_UPLOAD = 20 * 1024 * 1024
@@ -146,7 +146,7 @@ async def bid_review_upload(file: UploadFile, current_user: dict = Depends(get_c
 
 @router.post("/bid-review/review", status_code=202, dependencies=[Depends(llm_rate_limit)])
 async def bid_review(body: BidReviewBody, current_user: dict = Depends(get_current_user)):
-    """提交投标文件 → 后台四维并行评审 → 返回 review_id 供轮询（对标 EduAgent 4.8）"""
+    """提交投标文件 → 后台四维并行评审 → 返回 review_id 供轮询"""
     review_id = str(uuid.uuid4())
     graph = _get_bid_graph()
     state = {
@@ -178,7 +178,7 @@ async def bid_review(body: BidReviewBody, current_user: dict = Depends(get_curre
 
 @router.get("/bid-review/reviews/{review_id}")
 async def get_bid_review(review_id: str, current_user: dict = Depends(get_current_user)):
-    """轮询评审结果（状态机 processing→done→failed→404；15 分钟超时兜底，对标 EduAgent 4.9）"""
+    """轮询评审结果（状态机 processing→done→failed→404；15 分钟超时兜底，对标行业范式）"""
     REVIEW_TIMEOUT_SECONDS = 15 * 60
     async with engine.connect() as conn:
         row = (await conn.execute(text(
@@ -224,7 +224,7 @@ async def get_bid_review(review_id: str, current_user: dict = Depends(get_curren
 
 @router.get("/bid-review/reviews")
 async def list_bid_reviews(current_user: dict = Depends(get_current_user)):
-    """本人评审列表（倒序，对齐 EduAgent 4.9）"""
+    """本人评审列表（倒序，对齐行业范式）"""
     async with engine.connect() as conn:
         rows = (await conn.execute(text(
             "SELECT id, doc_name, status, created_at FROM bid_reviews WHERE user_id = :uid ORDER BY created_at DESC LIMIT 20"

@@ -1,4 +1,4 @@
-"""谈判交底（状态机）Agent REST 接口（对标 EduAgent 7.12）"""
+"""谈判交底（状态机）Agent REST 接口"""
 import json
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -23,7 +23,7 @@ class NegotiationBody(BaseModel):
 # ── 谈判交底（状态机）─────────────────────────────────────
 @router.post("/negotiation/chat", dependencies=[Depends(llm_rate_limit)])
 async def negotiation_chat(body: NegotiationBody, current_user: dict = Depends(get_current_user)):
-    """谈判多轮对话（状态机推进，对标 EduAgent 7.12）"""
+    """谈判多轮对话（状态机推进，对标行业范式）"""
     orchestrator = get_orchestrator()
     graph = orchestrator._get_agent_graph(AgentType.NEGOTIATION)
     config = build_config(current_user["user_id"], body.session_id)
@@ -49,10 +49,10 @@ async def negotiation_chat(body: NegotiationBody, current_user: dict = Depends(g
     }
 
 
-# ── 谈判：SSE 流式对话（对标 EduAgent 7.12 /chat/stream）─────────
+# ── 谈判：SSE 流式对话─────────
 @router.post("/negotiation/chat/stream", dependencies=[Depends(llm_rate_limit)])
 async def negotiation_chat_stream(body: NegotiationBody, current_user: dict = Depends(get_current_user)):
-    """谈判流式接口：token 级逐字输出 + done 附阶段/报告（对齐 EduAgent 7.12）"""
+    """谈判流式接口：token 级逐字输出 + done 附阶段/报告"""
     from sse_starlette.sse import EventSourceResponse
 
     orchestrator = get_orchestrator()

@@ -1,6 +1,6 @@
 # BuildMate Demo — 建筑行业智能助手
 
-对标 `D:\ai agent2\02.项目实战\02.EduAgent\文档\EduAgentV7.7` 架构实现的**建筑行业版可运行 Demo**（对应迁移方案第十二节"路线 A"）。
+面向建筑行业采购/商务场景的多 Agent 智能助手 Demo：标书审查、供应商谈判、采购审批、规范知识问答四大 Agent 协同，统一入口 + SSE 流式输出。
 
 ## ✅ 已验证可运行（2026-08-15 冒烟测试 9/9 通过）
 
@@ -16,7 +16,7 @@
 | 8 | 采购审批-HitL | 大额单 interrupt → resume → approved |
 | 9 | 供应商谈判 | 状态机多阶段推进（quote→tech→…） |
 
-## 架构（与 EduAgent V7.7 同构）
+## 架构（与 行业标杆同构）
 
 ```
 用户一句话
@@ -31,9 +31,9 @@
 ④ done 事件收尾
 ```
 
-## 四大建筑 Agent（对标 EduAgent 四范式）
+## 四大建筑 Agent（对标行业范式 四范式）
 
-| 建筑 Agent | 范式 | 对标 EduAgent | 关键实现 |
+| 建筑 Agent | 范式 | 对标行业范式 | 关键实现 |
 |---|---|---|---|
 | 投标文件审查 | 并行评审 fan-out/fan-in | 第 4 章 简历审查 | asyncio.gather 四维并行（商务/技术/资质/合规） |
 | 建筑知识问答 | RAG | 第 5 章 智能问答 | 本地向量检索 + HyDE/Multi-Query + 置信度路由 |
@@ -85,15 +85,15 @@ python tests/test_smoke.py
 
 ## 真实语义嵌入（BGE-M3）已接入 ✅
 
-使用 **EduAgent conda 环境**（`D:\develop\anaconda3\envs\EduAgent`，Python 3.11 + torch 2.5.1 CPU + transformers 4.51.0 + FlagEmbedding）运行 demo，本地加载 `D:\新建文件夹 (2)\models\embedding\bge-m3`（1024 维中文语义向量）。
+使用项目虚拟环境（Python 3.11 + transformers + FlagEmbedding）运行 demo，本地加载 `models/embedding/bge-m3`（1024 维中文语义向量；可通过 `MODELS_ROOT` 环境变量指定模型目录）。
 
-### 启动方式（必须用 EduAgent 环境）
+### 启动方式
 ```bash
 # 启动（bge-m3 首次加载约 15 秒）
-D:\develop\anaconda3\envs\EduAgent\python.exe -m uvicorn backend.main:app --port 8000
+python -m uvicorn backend.main:app --port 8000
 
 # 重灌知识库（1024 维向量）
-D:\develop\anaconda3\envs\EduAgent\python.exe scripts\seed_knowledge.py
+python scripts/seed_knowledge.py
 ```
 
 ### 三级嵌入降级
@@ -164,18 +164,18 @@ BuildMateDemo/
   tests/               # 单元 + HITL + 冒烟测试（51 用例）
 ```
 
-## EduAgent 架构完善记录（2026-08）
+## 架构演进记录（2026-08）
 
-对标 EduAgent V7.7 原版范式完成的升级：
+按模块化多 Agent 范式完成的能力升级：
 
 | 模块 | 升级内容 |
 |---|---|
 | 数据层 | 8 张表：users/qa_sessions(+summary_version)/bid_reviews(状态机+超时)/purchase_orders/approval_records/negotiation_sessions/knowledge_chunks/knowledge_pending_queue |
-| 投标审查 | 后台任务（202 提交）+ 轮询状态机（processing→done/failed）+ 15 分钟超时兜底 + 列表接口（对齐简历审查 4.8/4.9） |
-| 知识问答 | 记忆节点（load/save_memory + 摘要压缩，每 10 轮触发）+ MemorySaver 多轮记忆 + 历史会话接口（对齐 RAG 5.9/5.16） |
-| 采购审批 | pending 待审批列表 + my-orders 我的订单 + 结果查询（对齐试卷批改 6.12） |
-| 供应商谈判 | 结构化五维报告生成（价格/技术/交付/风险/合作）+ SSE 流式接口（对齐模拟面试 7.9/7.12） |
-| Orchestrator | Pipeline 每步独立 session_id 防串台 + 前序 structured 注入后序（{agent}_result 键）+ 失败保留成果（对齐 8.3） |
+| 投标审查 | 后台任务（202 提交）+ 轮询状态机（processing→done/failed）+ 15 分钟超时兜底 + 列表接口 |
+| 知识问答 | 记忆节点（load/save_memory + 摘要压缩，每 10 轮触发）+ MemorySaver 多轮记忆 + 历史会话接口 |
+| 采购审批 | pending 待审批列表 + my-orders 我的订单 + 结果查询（人工审批 HitL） |
+| 供应商谈判 | 结构化五维报告生成（价格/技术/交付/风险/合作）+ SSE 流式接口 |
+| Orchestrator | Pipeline 每步独立 session_id 防串台 + 前序 structured 注入后序（{agent}_result 键）+ 失败保留成果 |
 | 前端 | 投标审查改为轮询渲染（提交→轮询→报告/风险/结论） |
 
 ### 新增 API 一览
@@ -184,18 +184,18 @@ BuildMateDemo/
 - `POST /api/v1/negotiation/chat/stream`（SSE 流式 + done 附报告）
 - `GET /api/v1/qa/sessions/{id}/history`（历史会话）
 
-## 部署方式（对标 EduAgent 规范）
+## 部署方式
 
 ### 环境要求
-- Python 3.11（EduAgent conda 环境：`D:\develop\anaconda3\envs\EduAgent`）
+- Python 3.11+（项目虚拟环境，依赖见 requirements.txt）
 - Node.js 18+（前端）
-- 本地模型：`D:\新建文件夹 (2)\models`（BGE-M3 / Reranker / MiniLM）
+- 本地模型：`models/` 目录（BGE-M3 / Reranker / MiniLM；用 `MODELS_ROOT` 环境变量指定）
 - Docker（可选：PostgreSQL + Milvus 基础设施）
 
-### 双终端启动（EduAgent 方式）
+### 双终端启动
 ```bash
 # 终端 A：后端 :8000
-scripts\start_backend.bat        # 或 D:/develop/anaconda3/envs/EduAgent/python.exe -m uvicorn backend.main:app --port 8000
+scripts\start_backend.bat        # 或 python -m uvicorn backend.main:app --port 8000
 
 # 终端 B：前端 :3000
 scripts\start_frontend.bat       # 或 cd frontend && npm run dev
@@ -216,7 +216,7 @@ python scripts/seed_knowledge.py  # 灌知识库（本地嵌入或 Milvus）
 
 ## Vue3 前端完成（✅ 已验证联通）
 
-前端已从单页 SPA 升级为 **Vue3 + Element Plus + Pinia + Vue Router** 完整工程（`frontend/`），对齐 EduAgent 第 9 章：
+前端已从单页 SPA 升级为 **Vue3 + Element Plus + Pinia + Vue Router** 完整工程（`frontend/`），对齐行业范式 第 9 章：
 
 | 页面 | 功能 |
 |---|---|
@@ -232,7 +232,7 @@ python scripts/seed_knowledge.py  # 灌知识库（本地嵌入或 Milvus）
 ### 启动方式（两个终端）
 ```bash
 # 终端1：后端 :8000
-D:/develop/anaconda3/envs/EduAgent/python.exe -m uvicorn backend.main:app --port 8000
+python/python.exe -m uvicorn backend.main:app --port 8000
 
 # 终端2：前端 :3000
 cd frontend && npm install && npm run dev
@@ -243,7 +243,7 @@ cd frontend && npm install && npm run dev
 - ✅ Vite proxy 联通后端（登录/SSE/查询全通）
 - ✅ SSE 流式经 proxy：44 token，回答"螺纹钢 3560 元/吨"（来源 [建材价格]）
 
-## Vue3 前端（对齐 EduAgent 第9章）
+## Vue3 前端（对齐行业范式 第9章）
 
 前端已从单页 SPA 升级为 **Vue3 + Element Plus + Pinia + Vue Router** 完整工程（`frontend/`）：
 - 登录页 / 仪表盘 / 智能对话（SSE 流式）/ 投标审查（PDF上传+轮询）/ 采购审批 / 供应商谈判 / 教师端（待审批+知识待补）/ 历史记录
@@ -254,17 +254,17 @@ cd frontend && npm install && npm run dev
 
 ## PostgreSQL + Milvus 实连验证（已完成 ✅）
 
-系统已有 EduAgent 环境的基础设施容器运行，demo 已实连：
+系统已有 PostgreSQL + Milvus 基础设施容器运行，demo 已实连：
 
 | 组件 | 容器 | 连接 |
 |---|---|---|
-| PostgreSQL | edu_agent_postgres (:5433) | ✅ 建 buildmate 库 + 8 表 + 用户 |
-| Milvus | edu_agent_milvus (:19531) | ✅ knowledge_domain 集合（course_id=buildmate 隔离） |
+| PostgreSQL | postgres (:5433) | ✅ 建 buildmate 库 + 8 表 + 用户 |
+| Milvus | milvus (:19531) | ✅ knowledge_domain 集合（course_id=buildmate 隔离） |
 | MinIO/etcd | Milvus 依赖 | ✅ healthy |
 
 ### 实连要点
-1. .env：DATABASE_URL=postgresql+asyncpg://eduagent_user:eduagent123456@localhost:5433/buildmate，MILVUS_HOST=localhost
-2. Milvus schema 对齐 EduAgent knowledge_domain（embedding 1024 维 + sparse_embedding 等必填字段），course_id=buildmate 隔离
+1. .env：`DATABASE_URL=postgresql+asyncpg://<user>:<password>@localhost:5433/buildmate`，`MILVUS_HOST=localhost`（口令用环境变量，勿提交真实凭据）
+2. Milvus schema 对齐标准 knowledge_domain（embedding 1024 维 + sparse_embedding 等必填字段），course_id=buildmate 隔离
 3. db/dialect.py 处理 SQLite/PG upsert 差异；migrations.py 跨方言查表
 4. Milvus 搜索需指定 anns_field=embedding（集合有 dense+sparse 双向量字段）
 
@@ -325,7 +325,7 @@ PostgreSQL/Milvus 实连验证在正常环境进行。SQLite 模式已回归验�
 一次问答 = 3 次 LLM 调用（路由+策略+生成），`GET /api/v1/observability/stats` 返回：
 `{"calls": 3, "total_ms": 2392, "est_cost_usd": 0.0007}`
 
-## 差距补齐记录（第二轮：对齐 EduAgent 完整框架）
+## 差距补齐记录（第二轮：对齐行业范式 完整框架）
 
 | # | 补齐项 | 实现 |
 |---|---|---|
@@ -340,8 +340,8 @@ PostgreSQL/Milvus 实连验证在正常环境进行。SQLite 模式已回归验�
 
 ### MCP 独立进程启动
 ```bash
-D:/develop/anaconda3/envs/EduAgent/python.exe backend/mcp/knowledge_base_server.py  # :8001
-D:/develop/anaconda3/envs/EduAgent/python.exe backend/mcp/web_search_server.py       # :8002
+python/python.exe backend/mcp/knowledge_base_server.py  # :8001
+python/python.exe backend/mcp/web_search_server.py       # :8002
 ```
 
 ## 已知修复记录
@@ -349,7 +349,7 @@ D:/develop/anaconda3/envs/EduAgent/python.exe backend/mcp/web_search_server.py  
 - **SSE token 流**：Mock 模式下 MockChatModel 原本不产生流式 chunk，导致前端停在"思考中"。已实现 `_stream()` 方法（按 4 字符切块 yield AIMessageChunk）+ 统一入口兜底（generate 结束时无 token 则推送完整答案）。冒烟测试确认 token 流 = True。
 - **前端 SSE 解析 CRLF**：sse-starlette 用 CRLF（\r\n\r\n）分帧，旧前端用 `split('\n\n')` 切不开导致页面停在"思考中"。已改为逐行解析（兼容 CRLF/LF）。
 - **检索质量**：知识库从 5 个大块细分为 14 个二级标题块（每块自带标题上下文）；塔吊租赁从"施工规范"归位到"机械租赁"；检索加入关键词域加权（价格/规范/招标/施工方案/租赁/采购），mock 模式命中准确率大幅提升。
-- **混合检索（Hybrid）**：对标 EduAgent WeightedRanker(0.7, 0.3)——Dense 路（字符哈希向量余弦，语义）+ Sparse 路（BM25，字面词命中，IDF 自动压低"规范/施工"等高频泛词），融合分 = 0.7×dense + 0.3×sparse_ratio。另加**共享实体词门槛**：查询与 chunk 必须共享含非功能字的 3-gram 专名（螺纹钢/塔吊/深基坑…）才保留 sparse 贡献，否则归零——彻底解决"女儿墙施工规范"（库内无此内容）被"施工/规范"泛词抬分误答的问题。
+- **混合检索（Hybrid）**：对标行业范式 WeightedRanker(0.7, 0.3)——Dense 路（字符哈希向量余弦，语义）+ Sparse 路（BM25，字面词命中，IDF 自动压低"规范/施工"等高频泛词），融合分 = 0.7×dense + 0.3×sparse_ratio。另加**共享实体词门槛**：查询与 chunk 必须共享含非功能字的 3-gram 专名（螺纹钢/塔吊/深基坑…）才保留 sparse 贡献，否则归零——彻底解决"女儿墙施工规范"（库内无此内容）被"施工/规范"泛词抬分误答的问题。
 - **检索加权改为实体词词典**：原"领域词表加权"会把查询中的通用词（如"规范"）抬升所有规范类 chunk，导致"女儿墙施工规范"（知识库无此内容）误答地基基础规范。现改为仅当【具体实体词】（螺纹钢/塔吊/GB50010/女儿墙等）在查询与 chunk 中都出现才加权，配合阈值 0.6 实现准确判定：相关命中 0.9~1.5（RAG），无关 0.3~0.5（诚实回复"暂无相关内容"）。
 - **置信度阈值 0.6**：检索 top1 得分 ≥0.6 才走 RAG 回答（相关命中实测 ≥0.95，无关 ≤0.28），知识库没有的问题会诚实回复"暂无相关内容"而非硬答不相关结果。
 - **Mock 回答与检索一致**：Mock 模式的问答回复原本硬编码为"螺纹钢价格"，导致问规范也答价格。已改为从 prompt 中提取【知识库参考内容】原样回显（问规范回规范、问价格回价格），并保留参考来源标注。
@@ -358,9 +358,9 @@ D:/develop/anaconda3/envs/EduAgent/python.exe backend/mcp/web_search_server.py  
 
 - **SSE token 流**：Mock 模式下 MockChatModel 原本不产生流式 chunk，导致前端停在"思考中"。已实现 `_stream()` 方法（按 4 字符切块 yield AIMessageChunk）+ 统一入口兜底（generate 结束时无 token 则推送完整答案）。冒烟测试确认 token 流 = True。
 
-## 与 EduAgent 原版的差异（demo 降级点）
+## 与行业标杆实现的差异（demo 降级点）
 
-| 组件 | EduAgent 原版 | 本 Demo |
+| 组件 | 行业标杆实现 | 本 Demo |
 |---|---|---|
 | 数据库 | PostgreSQL + asyncpg | SQLite + aiosqlite（改 DATABASE_URL 即可切回） |
 | 向量库 | Milvus + BGE-M3 | 本地哈希向量（改 `knowledge_base.py` 可切真实嵌入） |

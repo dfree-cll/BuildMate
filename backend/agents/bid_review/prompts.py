@@ -1,4 +1,4 @@
-"""投标审查 Agent 提示词（对标 EduAgent 4.3，建筑版）"""
+"""投标审查 Agent 提示词"""
 EXTRACT_PROMPT = """请从以下投标文件文本中提取结构化信息，输出 JSON：
 - project_name: 项目名称
 - bidder: 投标人/企业名称

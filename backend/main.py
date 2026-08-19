@@ -1,4 +1,4 @@
-"""BuildMate Demo 应用入口（对标 EduAgent 8.6 main 集成）
+"""BuildMate Demo 应用入口
 启动：uvicorn backend.main:app --port 8000
 """
 import sys
@@ -93,7 +93,7 @@ async def lifespan(app: FastAPI):
     logger.info("app.shutdown")
 
 
-app = FastAPI(title=settings.app_name, description="建筑行业智能助手 Demo（对标 EduAgent V7.7 架构）",
+app = FastAPI(title=settings.app_name, description="建筑行业智能助手 Demo",
                lifespan=lifespan)
 
 # CORS：* + credentials=True 会被浏览器拒绝（且扩大 CSRF 面）。
@@ -112,10 +112,10 @@ app.add_middleware(
 
 app.include_router(api_router, prefix="/api/v1")
 
-# ── MCP 工具层（对标 EduAgent 8.6）──────────────────────
+# ── MCP 工具层──────────────────────
 # MCP Server 作为独立进程运行：
-#   D:/develop/anaconda3/envs/EduAgent/python.exe backend/mcp/knowledge_base_server.py  # :8001
-#   D:/develop/anaconda3/envs/EduAgent/python.exe backend/mcp/web_search_server.py       # :8002
+#   python backend/mcp/knowledge_base_server.py  # :8001
+#   python backend/mcp/web_search_server.py       # :8002
 # 通过 MCP Client 调用（backend/mcp/client.py）。
 
 @app.get("/health")

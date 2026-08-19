@@ -1,4 +1,4 @@
-"""投标审查 Agent 节点（对标 EduAgent 4：asyncio.gather 并行评审，直线图）
+"""投标审查 Agent 节点
 parse → extract → 四维并行评审 → 汇总
 """
 import asyncio
@@ -61,7 +61,7 @@ async def review_dimension(dim: dict, doc_text: str):
 
 
 async def parallel_review_node(state: BidReviewState) -> dict:
-    """四维并行评审（asyncio.gather，对标 EduAgent 六维度并行）"""
+    """四维并行评审（asyncio.gather，四维度并行）"""
     doc_text = state["doc_text"]
     results = await asyncio.gather(*[review_dimension(d, doc_text) for d in DIMENSIONS])
     weighted = round(sum(r["score"] * r["weight"] for r in results), 2)

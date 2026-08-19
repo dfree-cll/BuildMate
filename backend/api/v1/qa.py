@@ -1,4 +1,4 @@
-"""知识问答 + 知识库 Agent REST 接口（对标 EduAgent 5.16/8.2）"""
+"""知识问答 + 知识库 Agent REST 接口"""
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ class ChatBody(BaseModel):
 # ── 通用：Orchestrator 直达（测试用）─────────────────────
 @router.post("/agents/{agent_type}/run", dependencies=[Depends(llm_rate_limit)])
 async def run_agent(agent_type: str, body: ChatBody, current_user: dict = Depends(get_current_user)):
-    """通过 Orchestrator 直接运行任意 Agent（对标 EduAgent 8.2 handle）"""
+    """通过 Orchestrator 直接运行任意 Agent"""
     try:
         at = AgentType(agent_type)
     except ValueError:
@@ -34,10 +34,10 @@ async def run_agent(agent_type: str, body: ChatBody, current_user: dict = Depend
     return resp.model_dump()
 
 
-# ── 知识问答：历史会话（对标 EduAgent 5.16）─────────────────
+# ── 知识问答：历史会话─────────────────
 @router.get("/qa/sessions/{session_id}/history")
 async def get_qa_history(session_id: str, current_user: dict = Depends(get_current_user)):
-    """获取问答会话历史：DB 摘要 + MemorySaver 消息（对齐 EduAgent 5.16）"""
+    """获取问答会话历史：DB 摘要 + MemorySaver 消息"""
     from backend.core.memory import build_thread_id
     from langchain_core.messages import HumanMessage as HM, AIMessage as AM
 
@@ -72,7 +72,7 @@ async def get_qa_history(session_id: str, current_user: dict = Depends(get_curre
             "messages": messages, "total_turns": sum(1 for m in messages if m["role"] == "user")}
 
 
-# ── 知识待补队列（对标 EduAgent knowledge_pending_queue）────────
+# ── 知识待补队列────────
 @router.get("/knowledge/pending")
 async def list_knowledge_pending(status: str = "pending", current_user: dict = Depends(get_current_user)):
     """查询知识待补队列（教师视角：查看低置信度问题）"""

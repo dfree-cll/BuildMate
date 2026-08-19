@@ -1,4 +1,4 @@
-"""知识问答 Agent 图装配（对标 EduAgent 5.15）
+"""知识问答 Agent 图装配
 load_memory → classify_query → (PRECISE/VAGUE/BROAD → retrieve | GENERAL → generate) → generate → enqueue_pending → save_memory
 低置信度问题 → knowledge_pending_queue（知识待补闭环）
 """

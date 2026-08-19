@@ -1,4 +1,4 @@
-"""采购审批（HitL）Agent REST 接口（对标 EduAgent 6.9/6.12）"""
+"""采购审批（HitL）Agent REST 接口"""
 import json
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
@@ -83,7 +83,7 @@ async def create_procurement_order(body: ProcurementBody, current_user: dict = D
 @router.post("/procurement/orders/{order_no}/confirm")
 async def confirm_procurement(order_no: str, decision: ProcurementDecision,
                               current_user: dict = Depends(require_role("admin", "teacher"))):
-    """人工审批：Command(resume=...) 恢复被 interrupt 的图（对标 EduAgent 6.9/6.12）
+    """人工审批：Command(resume=...) 恢复被 interrupt 的图
     安全：仅 admin/teacher 可审批；operator 强制取当前用户（客户端不可伪造）
     ★ H1 修复：中断 checkpoint 在【创建者】线程上，thread 归属必须反查订单创建者重建，
     不能用审批人的 user_id（否则 resume 落在空线程，买家下单/管理员审批必挂）"""
@@ -127,7 +127,7 @@ async def confirm_procurement(order_no: str, decision: ProcurementDecision,
     }
 
 
-# ── 采购审批：列表/待审批（对标 EduAgent 6.12 /pending-reviews /my-submissions）──
+# ── 采购审批：列表/待审批──
 @router.get("/procurement/pending")
 async def procurement_pending(current_user: dict = Depends(require_role("admin", "teacher"))):
     """待人工审批的采购单列表（仅 admin/teacher）"""
@@ -151,7 +151,7 @@ async def procurement_pending(current_user: dict = Depends(require_role("admin",
 
 @router.get("/procurement/my-orders")
 async def procurement_my_orders(current_user: dict = Depends(get_current_user)):
-    """我的采购单列表（对齐 EduAgent /my-submissions）"""
+    """我的采购单列表"""
     async with engine.connect() as conn:
         rows = (await conn.execute(text(
             "SELECT order_no, material_name, quantity, total_amount, status, created_at "

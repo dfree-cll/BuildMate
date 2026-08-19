@@ -1,4 +1,4 @@
-"""三层兜底机制（对标 EduAgent 3.5）：自动重试 → Agent 级降级 → 系统级兜底"""
+"""三层兜底机制：自动重试 → Agent 级降级 → 系统级兜底"""
 import asyncio
 from functools import wraps
 from typing import Callable, Any, Optional

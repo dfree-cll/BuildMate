@@ -1,4 +1,4 @@
-"""本地向量库（对标 EduAgent Milvus + BGE-M3，demo 降级实现）
+"""本地向量库
 - 有 EMBEDDING_API_KEY：调用 OpenAI 兼容 embedding API（如硅基流动 BAAI/bge-m3）
 - 无 key：字符哈希向量（n-gram + TF），离线可跑，效果足够 demo 演示
 - 存储：SQLite 表 knowledge_chunks（json 持久化向量），进程内缓存
@@ -42,7 +42,7 @@ class TextVectorizer:
     @classmethod
     async def embed(cls, texts: list[str]) -> list[list[float]]:
         settings = get_settings()
-        # ① 优先本地 BGE 中文模型（免费、离线、语义向量，对齐 EduAgent BGE-M3 思路）
+        # ① 优先本地 BGE 中文模型（免费、离线、语义向量，BGE-M3 语义向量）
         try:
             return await cls._local_bge_embed(texts)
         except Exception as e:
@@ -273,7 +273,7 @@ async def add_chunks(chunks: list[dict], tenant_id: str = "tenant_default"):
             return
 
 
-# ═══════════════ Milvus 可选后端（对标 EduAgent Milvus）═══════════════
+# ═══════════════ Milvus 可选后端═══════════════
 def _milvus_enabled() -> bool:
     """Milvus 是否启用：配置了 host 且可连接"""
     from backend.config import get_settings
@@ -282,7 +282,7 @@ def _milvus_enabled() -> bool:
 
 
 def _milvus_filter(tenant_id: str) -> str:
-    """Milvus 过滤表达式：只检索 buildmate 的数据（course_id=buildmate），避免 EduAgent 旧数据干扰
+    """Milvus 过滤表达式：只检索 buildmate 的数据（course_id=buildmate），避免 历史数据干扰
     M9：tenant_id 转义（当前来自签名 token 风险低，按企业标准仍防表达式注入）"""
     tid = tenant_id.replace("\\", "\\\\").replace('"', '\\"')
     return f'tenant_id == "{tid}" and course_id == "buildmate"'
@@ -298,7 +298,7 @@ def _get_milvus_client():
         from backend.config import get_settings
         s = get_settings()
         _milvus_client = MilvusClient(uri=f"http://{s.milvus_host}:{s.milvus_port}")
-        # 建集合（若不存在）——完整 schema，对齐 EduAgent 05-05 knowledge_domain
+        # 建集合（若不存在）——完整 schema，对齐行业范式-05 knowledge_domain
         # （embedding/sparse_embedding/content/tenant_id 等字段名与检索/写入一致）
         if not _milvus_client.has_collection("knowledge_domain"):
             schema = _milvus_client.create_schema(auto_id=False, enable_dynamic_field=True)
@@ -353,23 +353,23 @@ def _milvus_search(query_vec: list[float], tenant_id: str, top_k: int) -> list[d
 
 
 def _milvus_add(chunks: list[dict], vectors: list[list[float]], tenant_id: str) -> None:
-    """Milvus 写入（对齐 EduAgent knowledge_domain schema：embedding/document_id）"""
+    """Milvus 写入"""
     client = _get_milvus_client()
     data = []
     for c, vec in zip(chunks, vectors):
         data.append({
             "id": f"{c['doc_id']}_{c['chunk_index']}",
-            "embedding": vec,                       # EduAgent schema 字段名（BGE-M3 dense）
+            "embedding": vec,                       # 标准 schema 字段名（BGE-M3 dense）
             # 稀疏向量：由 BM25 词频构造（Milvus 2.4 要求非空；顺带启用 hybrid 稀疏路）
             "sparse_embedding": _build_sparse_vec(c["content"]),
             "content": c["content"],
             "source_name": c.get("source_name", ""),
-            "document_id": c.get("doc_id", ""),     # EduAgent schema 字段名
+            "document_id": c.get("doc_id", ""),     # 标准 schema 字段名
             "chunk_index": c.get("chunk_index", 0),
-            "course_id": "buildmate",               # 标识来源（隔离 EduAgent 数据）
+            "course_id": "buildmate",               # 标识来源（隔离 历史数据）
             "tenant_id": tenant_id,
-            "chunk_type": "text",                   # EduAgent schema 必填
-            "version": "1.0",                       # EduAgent schema 必填
+            "chunk_type": "text",                   # 标准 schema 必填
+            "version": "1.0",                       # 标准 schema 必填
             "updated_at": int(time.time()),
         })
     if data:
@@ -387,7 +387,7 @@ def _build_sparse_vec(text: str) -> dict:
         freq = {0: 0.0}   # Milvus 2.4 要求非空稀疏向量
     return freq
 
-# ── BM25 稀疏检索（对标 EduAgent Milvus hybrid_search 的稀疏路）────────────────
+# ── BM25 稀疏检索────────────────
 # 与稠密向量互补：BM25 看重字面词命中，IDF 自动压低"规范/施工"这类高频泛词，
 # 突出"女儿墙/螺纹钢/GB50010"等低频专名 → 不会再把无关 chunk 抬过阈值。
 _STOP_WORDS = frozenset([
@@ -481,7 +481,7 @@ async def _load_rows(tenant_id: str) -> list:
 
 async def _local_search(query: str, qvec: list[float], tenant_id: str,
                        top_k: int, min_score: float) -> list[dict]:
-    """本地混合检索（对标 EduAgent WeightedRanker(0.7, 0.3)）：
+    """本地混合检索：
     Dense 路：字符哈希向量余弦相似度（语义）
     Sparse 路：BM25（字面词命中，IDF 自动压低高频泛词）
     融合：score = 0.7 * dense_norm + 0.3 * sparse_norm

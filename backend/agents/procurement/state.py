@@ -1,4 +1,4 @@
-"""采购审批 Agent 状态（对标 EduAgent 6 试卷批改：三轨 + HitL）
+"""采购审批 Agent 状态
 规则引擎 + LLM 双轨审核 → interrupt 人工审批 → 发布
 """
 from typing import Annotated, Optional

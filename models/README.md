@@ -1,6 +1,6 @@
-# 本地模型目录（对标 EduAgent models/ 规范）
+# 本地模型目录
 
-模型文件存放在 `D:\新建文件夹 (2)\models`（EduAgent 环境预留的模型仓库）：
+模型文件放在 `MODELS_ROOT` 指向的目录（默认项目内 `models/`，可通过环境变量覆盖；容器内为 `/models`）：
 
 | 目录 | 模型 | 用途 |
 |---|---|---|
@@ -8,4 +8,4 @@
 | reranker/bge-reranker-large | BGE-Reranker-Large | 检索精排 |
 | classifier/query-classifier-finetuned | MiniLM 微调版 | 意图分类 |
 
-部署到新机器时，将整个 models/ 目录拷贝到目标机，并在 .env.local 设置 MODELS_ROOT 指向它。
+> 未配置时自动降级：API embedding → 本地哈希向量（demo 仍可运行）。

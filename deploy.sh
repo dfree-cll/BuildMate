@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # BuildMate 一键部署脚本（Linux/macOS）
 # 说明：
-#   - 本机部署：直接运行（默认使用 D:\新建文件夹 (2)\models 本地模型）
+#   - 本机部署：直接运行（默认使用 models/ 本地模型，MODELS_ROOT 可覆盖）
 #   - Docker 部署：docker compose up -d（MODELS_PATH 环境变量指定模型目录）
 #     例：MODELS_PATH=/path/to/models docker compose up -d
 set -e

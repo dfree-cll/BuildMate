@@ -1,6 +1,6 @@
-"""意图分类器（对标 EduAgent 5.8：MiniLM-L6-v2 二分类 general/specialized）
+"""意图分类器
 规则快通道 → MiniLM 本地分类 → LLM 精判，三层策略
-模型：D:\\新建文件夹 (2)\\models\\classifier\\query-classifier-finetuned（微调版，general/specialized）
+模型：MODELS_ROOT/classifier/query-classifier-finetuned（微调版，general/specialized）
 """
 import asyncio
 import os
@@ -49,7 +49,7 @@ class QueryClassifier:
         return cls._instance
 
     def classify(self, text: str) -> tuple[str, float]:
-        """返回 (label, confidence)：general / specialized（EduAgent 5.8 规则）
+        """返回 (label, confidence)：general / specialized（规则快通道）
         修复：pipeline 返回结构兼容 list[dict] 与 dict（原代码迭代 dict key 会 TypeError）"""
         out = self._pipeline(text)
         raw = out[0] if isinstance(out, list) and out else out
@@ -71,7 +71,7 @@ class QueryClassifier:
         return "specialized", 1.0 - general_score
 
 
-# ── 规则快通道（对标 EduAgent Layer 0，不调模型）──────────────
+# ── 规则快通道──────────────
 _GENERAL_EXACT = {"你好", "谢谢", "再见", "hi", "hello", "谁"}
 _GENERAL_KEYWORDS = ("今天天气", "现在几点", "讲个笑话")
 _SPECIALIZED_KEYWORDS = ("价格", "规范", "招标", "租赁", "施工", "建筑")

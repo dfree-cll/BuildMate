@@ -1,4 +1,4 @@
-"""PDF 解析工具（对标 EduAgent 4.4 简历 PDF 解析：双栏检测 + 线程池）
+"""PDF 解析工具
 用于投标文件 PDF 解析，支持双栏布局
 """
 import asyncio

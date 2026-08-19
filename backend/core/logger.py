@@ -1,4 +1,4 @@
-"""结构化日志（对标 EduAgent 3.3：logger.info("事件", key=value)）"""
+"""结构化日志"""
 import logging
 import sys
 from backend.config import get_settings

@@ -1,4 +1,4 @@
-"""编排器 Orchestrator（对标 EduAgent 8.2/8.3）
+"""编排器 Orchestrator
 - 单 Agent 直达 _run_single_agent（@with_retry 包裹）
 - 多 Agent 串联 Pipeline _run_pipeline（前序 structured 注入后序 context）
 """
@@ -110,12 +110,12 @@ class Orchestrator:
         steps = self._get_pipeline_steps(pipeline_name)
         results: dict[str, AgentResponse] = {}
 
-        # 累积上下文：前序 Agent 的 structured 结果注入后序（对齐 EduAgent 8.3）
+        # 累积上下文：前序 Agent 的 structured 结果注入后序
         accumulated_context = dict(request.extra)
         for idx, (step_name, agent_type) in enumerate(steps):
             step_request = request.model_copy(deep=True)
             step_request.agent_type = agent_type
-            # ★ 每步独立 session_id，防止检查点串台（对齐 EduAgent _run_pipeline）
+            # ★ 每步独立 session_id，防止检查点串台
             step_request.session_id = f"{request.session_id}_step{idx + 1}"
             step_request.extra = dict(accumulated_context)
             # ★ 采购步骤补必填字段（Pipeline 场景无表单提交，用上下文合理默认防 KeyError）

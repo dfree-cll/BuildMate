@@ -29,3 +29,4 @@ no_such_models_dir/
 frontend/node_modules/
 frontend/static/
 frontend/dist/
+!.env.local.example

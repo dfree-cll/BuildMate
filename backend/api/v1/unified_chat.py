@@ -1,4 +1,4 @@
-"""统一 AI 助手入口（对标 EduAgent 8.4/8.5）
+"""统一 AI 助手入口
 SSE 事件类型：routing_decision / progress / token / guidance / pipeline_plan / meta / done / error
 """
 import json

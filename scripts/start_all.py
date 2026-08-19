@@ -1,4 +1,4 @@
-"""一键启动 BuildMate Demo（对标 EduAgent 09-03 完整系统启动）
+"""一键启动 BuildMate Demo
 用法：python scripts/start_all.py
 """
 import subprocess

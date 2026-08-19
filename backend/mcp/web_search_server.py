@@ -1,4 +1,4 @@
-"""联网搜索 MCP Server（对标 EduAgent 5.11 H-2）
+"""联网搜索 MCP Server
 工具：web_search(query, max_results) — DuckDuckGo 免费搜索（无需 key）
 """
 import asyncio
@@ -37,7 +37,7 @@ async def web_search(
     query: str,
     max_results: int = 5,
 ) -> list[dict]:
-    """联网搜索最新信息（知识库未覆盖时兜底，对标 EduAgent 5.11）
+    """联网搜索最新信息（知识库未覆盖时兜底，对标行业范式）
     Args:
         query: 搜索关键词
         max_results: 返回条数

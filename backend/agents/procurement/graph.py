@@ -1,4 +1,4 @@
-"""采购审批 Agent 图装配（HitL：interrupt/resume，对标 EduAgent 6.11）"""
+"""采购审批 Agent 图装配（HitL：interrupt/resume，对标行业范式）"""
 from langgraph.graph import StateGraph, START, END
 from backend.agents.procurement.state import ProcurementState
 from backend.agents.procurement.nodes import (

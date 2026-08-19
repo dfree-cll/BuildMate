@@ -1,4 +1,4 @@
-"""LLM Factory（对标 EduAgent 3.4）
+"""LLM Factory
 - 有 API Key：走真实 OpenAI 兼容接口（ChatOpenAI）
 - 无 API Key：Mock 模式，返回 MockChatModel（本地规则模板），保证 demo 全链路离线可跑
 """

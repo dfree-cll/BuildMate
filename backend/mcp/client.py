@@ -1,4 +1,4 @@
-"""MCP Client（对标 EduAgent 5.11 H-3：JSON-RPC tools/call）"""
+"""MCP Client"""
 import json
 from typing import Any
 

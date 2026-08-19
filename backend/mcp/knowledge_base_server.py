@@ -1,4 +1,4 @@
-"""知识库检索 MCP Server（对标 EduAgent 5.11 H-1）
+"""知识库检索 MCP Server
 工具：search_knowledge_base(query, tenant_id, top_k) — 混合检索 + Reranker 精排
 """
 import asyncio
@@ -18,7 +18,7 @@ async def search_knowledge_base(
     tenant_id: str = "tenant_default",
     top_k: int = 3,
 ) -> list[dict]:
-    """在建筑知识库中做混合检索 + 精排（对标 EduAgent 5.11）
+    """在建筑知识库中做混合检索 + 精排
     Args:
         query: 查询文本
         tenant_id: 租户 ID（默认 tenant_default）

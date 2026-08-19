@@ -1,4 +1,4 @@
-"""谈判交底 Agent 节点（对标 EduAgent 7：状态机推进 + SSE）
+"""谈判交底 Agent 节点
 阶段流转：quote → tech → delivery → sign → done（每阶段至少 2 轮对话再推进）
 修复：① JSON 报告解析用平衡花括号 ② 阶段推进需 >=2 轮
 """

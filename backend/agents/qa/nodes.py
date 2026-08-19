@@ -1,4 +1,4 @@
-"""知识问答 Agent 节点（对标 EduAgent 5.12-5.14，demo 精简为 3 节点）
+"""知识问答 Agent 节点
 classify_query（规则+LLM 判 PRECISE/VAGUE/BROAD/GENERAL）
 → retrieve（本地向量检索）
 → generate（RAG 或直答）
@@ -183,7 +183,7 @@ async def retrieve_node(state: QAState) -> dict:
                 "rewritten_queries": queries}
 
     chunks = await search(query, tenant_id=tenant_id, top_k=8)   # 召回 8 条 → 精排
-    # ── Reranker 精排（对标 EduAgent 5.7：召回 top8 → 精排 top3 + 置信度）──
+    # ── Reranker 精排──
     try:
         from backend.core.reranker import rerank_results
         ranked, confidence = await rerank_results(query, chunks, top_k=3)
@@ -285,7 +285,7 @@ async def generate_node(state: QAState) -> dict:
     }
 
 
-# ═══════════════ 记忆节点（对标 EduAgent 5.9/5.14）═══════════════
+# ═══════════════ 记忆节点═══════════════
 async def save_memory_node(state: QAState) -> dict:
     """记忆保存：每轮把对话与摘要 UPSERT 到 qa_sessions（失败静默）"""
     from sqlalchemy import text
@@ -340,7 +340,7 @@ async def load_memory_node(state: QAState) -> dict:
     return {"existing_summary": None}
 
 
-# ═══════════════ 知识待补节点（对标 EduAgent 5.14 enqueue_pending_node）═══════════════
+# ═══════════════ 知识待补节点═══════════════
 async def enqueue_pending_node(state: QAState) -> dict:
     """低置信度问题写入 knowledge_pending_queue（知识待补闭环）"""
     from sqlalchemy import text

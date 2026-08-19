@@ -1,4 +1,4 @@
-"""供应商谈判/施工交底 Agent 状态（对标 EduAgent 7 模拟面试：状态机 + SSE）"""
+"""供应商谈判/施工交底 Agent 状态"""
 import enum
 from typing import Annotated, Optional
 from typing_extensions import TypedDict

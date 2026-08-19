@@ -1,4 +1,4 @@
-"""BuildMate Demo 冒烟测试（对标 EduAgent 8.7 端到端测试）
+"""BuildMate Demo 冒烟测试
 用法：python tests/test_smoke.py
 覆盖：登录 → SSE 流式（前置拦截/QA/引导）→ 各 Agent 直达 → 采购 HitL resume
 """

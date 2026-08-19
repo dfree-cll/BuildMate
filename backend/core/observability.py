@@ -1,4 +1,4 @@
-"""可观测性：LLM 调用追踪（对标 EduAgent Langfuse 的轻量替代）
+"""可观测性：LLM 调用追踪
 记录每次 LLM 调用：时间/agent/模型/耗时/输入输出字符/估算成本
 存储：SQLite 表 llm_calls，无需外部服务
 """

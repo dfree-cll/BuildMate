@@ -1,4 +1,4 @@
-"""记忆管理（对标 EduAgent 5.9：每 Agent 独立 saver + thread_id）
+"""记忆管理
 Saver 持久化（修复：MemorySaver 进程内存态，重启后 interrupt 检查点丢失，
 导致 HitL 的 Command(resume=) 找不到中断点）
 
@@ -107,7 +107,7 @@ def build_thread_id(user_id: str, session_id: str) -> str:
 def build_config(user_id: str, session_id: str) -> dict:
     return {"configurable": {"thread_id": build_thread_id(user_id, session_id)}}
 
-# ═══════════════ 记忆控制策略（对标 EduAgent 5.9）═══════════════
+# ═══════════════ 记忆控制策略═══════════════
 
 
 def trim_messages_to_window(messages: list[BaseMessage], window_size: int = 10) -> list[BaseMessage]:

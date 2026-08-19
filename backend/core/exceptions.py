@@ -1,4 +1,4 @@
-"""统一异常体系（对标 EduAgent 3.3）"""
+"""统一异常体系"""
 class BuildMateBaseError(Exception):
     def __init__(self, message: str, agent_type: str = "", details: dict | None = None):
         super().__init__(message)

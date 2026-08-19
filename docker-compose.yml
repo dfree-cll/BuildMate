@@ -1,4 +1,4 @@
-# BuildMate Demo 生产基础设施（对齐 EduAgent 3.1 docker-compose）
+# BuildMate Demo 生产基础设施（对齐行业范式 3.1 docker-compose）
 # 启动：docker compose up -d
 # 说明：demo 默认用 SQLite 可直接运行；此文件供生产/性能测试启用 PostgreSQL + Milvus
 version: "3.9"

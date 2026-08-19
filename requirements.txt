@@ -1,4 +1,4 @@
-# BuildMate Demo - 建筑行业智能助手（对标 EduAgent V7.7 架构）
+# BuildMate Demo - 建筑行业智能助手
 # Python 3.11+ 全异步
 
 # 版本策略：轻量包用 >=（pip 自动解析），重量级模型包锁版本（避免构建时大升级下载）

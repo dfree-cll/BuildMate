@@ -1,4 +1,4 @@
-"""BuildMate Demo 配置中心（对标 EduAgent 3.3：pydantic-settings + 全局单例）
+"""BuildMate Demo 配置中心
 无 LLM Key 时进入 Mock 模式，全链路可离线运行。
 """
 from functools import lru_cache
@@ -28,9 +28,8 @@ class Settings(BaseSettings):
     embedding_base_url: str = "https://api.siliconflow.cn/v1"
     embedding_model: str = "BAAI/bge-m3"
 
-    # ── 本地模型根目录（BGE-M3/Reranker/分类器；容器内挂载到 /models 用）
-    # 本机默认 D:\新建文件夹 (2)\models；容器内设 MODELS_ROOT=/models
-    models_root: str = r"D:\新建文件夹 (2)\models"
+    # ── 本地模型根目录（默认项目内 models/；可通过 MODELS_ROOT 环境变量覆盖；容器内设 /models）──
+    models_root: str = "models"
 
     # ── JWT（安全：生产必须设置强随机密钥，见 .env.example 说明）──
     # 弱默认值仅用于本地 demo 离线跑通；生产环境缺失/弱值时启动告警（见 validate_security）

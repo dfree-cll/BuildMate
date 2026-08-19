@@ -1,6 +1,6 @@
-"""BGE-Reranker 精排（对标 EduAgent 5.7）
+"""BGE-Reranker 精排
 混合检索召回 top10 → BGE-Reranker 精排 top3 + 置信度（0.75 阈值）
-模型：D:\\新建文件夹 (2)\\models\\reranker\\bge-reranker-large（2.1GB，CPU 可跑）
+模型：MODELS_ROOT/reranker/bge-reranker-large（2.1GB，CPU 可跑）
 """
 import asyncio
 import os
@@ -11,7 +11,7 @@ from backend.core.logger import get_logger
 logger = get_logger(__name__)
 
 RERANK_MAX_INPUT_CHARS = 1200   # 截断过长文档，防止超出 max_length
-RERANK_CONFIDENCE_THRESHOLD = 0.75   # 高置信度阈值（对标 EduAgent）
+RERANK_CONFIDENCE_THRESHOLD = 0.75   # 高置信度阈值
 
 
 def _resolve_model_path(name: str) -> str:
@@ -63,7 +63,7 @@ class BGEReranker:
 
 
 async def rerank_results(query: str, candidates: list[dict], top_k: int = 3) -> tuple[list[dict], float]:
-    """异步精排入口：CPU 密集操作丢线程池，避免阻塞事件循环（对标 EduAgent rerank_with_confidence）"""
+    """异步精排入口：CPU 密集操作丢线程池，避免阻塞事件循环"""
     if not candidates:
         return [], 0.0
     loop = asyncio.get_running_loop()

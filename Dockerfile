@@ -1,7 +1,7 @@
 # BuildMate 生产镜像（多阶段：前端构建 + 后端运行时）
 # 用法：docker build -t buildmate:full .
 # 挂载本地模型（BGE-M3/Reranker/分类器，语义检索需要）：
-#   docker run -v "D:\新建文件夹 (2)\models:/models" -e MODELS_ROOT=/models -p 8000:8000 buildmate:full
+#   docker run -v "$(pwd)/models:/models" -e MODELS_ROOT=/models -p 8000:8000 buildmate:full
 
 # ═══════ Stage 1: 前端构建 ═══════
 FROM node:20-slim AS frontend-build

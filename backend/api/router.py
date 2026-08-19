@@ -1,4 +1,4 @@
-"""路由聚合（对标 EduAgent 8.6）"""
+"""路由聚合"""
 from fastapi import APIRouter
 from backend.api.v1 import auth, unified_chat, bid_review, procurement, negotiation, qa, bim_api
 
