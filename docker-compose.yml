@@ -1,0 +1,117 @@
+# BuildMate Demo 生产基础设施（对齐 EduAgent 3.1 docker-compose）
+# 启动：docker compose up -d
+# 说明：demo 默认用 SQLite 可直接运行；此文件供生产/性能测试启用 PostgreSQL + Milvus
+version: "3.9"
+
+services:
+  # ── PostgreSQL 业务数据库（对外 5433，避开本机 5432）──
+  postgres:
+    image: postgres:15-alpine
+    container_name: buildmate_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: buildmate
+      POSTGRES_USER: buildmate
+      POSTGRES_PASSWORD: buildmate123
+      PGTZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U buildmate -d buildmate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── etcd（Milvus 元数据，内部）──
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.14
+    container_name: buildmate_etcd
+    restart: unless-stopped
+    environment:
+      ETCD_AUTO_COMPACTION_MODE: revision
+      ETCD_AUTO_COMPACTION_RETENTION: "1000"
+      ETCD_QUOTA_BACKEND_BYTES: "4294967296"
+    command: etcd --advertise-client-urls=http://127.0.0.1:2379 --listen-client-urls=http://0.0.0.0:2379 --data-dir=/etcd
+    volumes:
+      - etcd_data:/etcd
+
+  # ── MinIO（Milvus 向量文件，内部）──
+  minio:
+    image: minio/minio:latest
+    container_name: buildmate_minio
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Milvus 向量库（对外 19531）──
+  milvus:
+    image: milvusdb/milvus:v2.4.0
+    container_name: buildmate_milvus
+    restart: unless-stopped
+    command: ["milvus", "run", "standalone"]
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      MINIO_ADDRESS: minio:9000
+      MINIO_ACCESS_KEY_ID: minioadmin
+      MINIO_SECRET_ACCESS_KEY: minioadmin
+    volumes:
+      - milvus_data:/var/lib/milvus
+    ports:
+      - "127.0.0.1:19532:19530"
+    depends_on:
+      etcd:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ── BuildMate 后端（镜像内已含前端静态产物，单端口 8000）──
+  backend:
+    image: buildmate:models
+    container_name: buildmate_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://buildmate:buildmate123@postgres:5432/buildmate
+      MILVUS_HOST: milvus
+      MILVUS_PORT: 19530
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 未设置：请在环境或项目 .env 提供强随机密钥}
+      MODELS_ROOT: /models
+    volumes:
+      # 本地模型（BGE-M3/Reranker/分类器）——宿主机路径按需修改
+      - ${MODELS_PATH:-./models}:/models
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  etcd_data:
+  minio_data:
+  milvus_data:

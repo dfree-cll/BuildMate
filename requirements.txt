@@ -1,0 +1,40 @@
+# BuildMate Demo - 建筑行业智能助手（对标 EduAgent V7.7 架构）
+# Python 3.11+ 全异步
+
+# 版本策略：轻量包用 >=（pip 自动解析），重量级模型包锁版本（避免构建时大升级下载）
+# 锁版本后如遇依赖冲突，将对应行改回 >= 让 pip 解析
+fastapi>=0.115
+uvicorn[standard]>=0.30
+sse-starlette>=2.0
+langgraph>=1.0
+langgraph-checkpoint-sqlite>=2.0
+langchain-core>=1.0
+langchain-openai>=1.0
+langchain-text-splitters>=1.0
+openai>=1.50
+sqlalchemy[asyncio]>=2.0
+aiosqlite>=0.20
+asyncpg>=0.29
+pymilvus>=2.4
+pydantic>=2.7
+pydantic-settings>=2.3
+python-dotenv>=1.0
+PyJWT>=2.8
+bcrypt>=4.0          # H4：用户密码哈希
+redis>=5.0            # 企业化：多实例共享限流/吊销状态（REDIS_URL 未配置时内存回退）
+alembic>=1.13         # 企业化：版本化数据库迁移
+psycopg[binary]>=3.2  # langgraph PostgresSaver 依赖
+langgraph-checkpoint-postgres>=2.0  # 企业化：检查点存 PG（多实例）
+httpx>=0.27
+numpy>=1.26
+python-multipart>=0.0.9
+pymupdf>=1.24  # PDF 解析（pdf_parser.py）
+ifcopenshell>=0.8  # IFC BIM 模型解析（ifc_parser.py）
+requests>=2.31
+mcp>=1.9,<2              # MCP Server SDK（backend/mcp/ 两个独立服务；2.x 移除了 server.fastmcp，勿升）
+duckduckgo-search>=6.0   # web_search_server 联网搜索
+schedule>=1.2  # 可选：fetch_material_prices.py --daemon 定时更新用
+# 本地嵌入/重排模型（锁版本，避免每次构建下载新版 torch 526MB+）
+sentence-transformers==3.3.1
+transformers==4.51.0
+torch==2.5.1

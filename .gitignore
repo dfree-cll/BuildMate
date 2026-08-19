@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.pyc
+buildmate.db
+*.log
+_server*.log
+
+# 凭据安全：排除所有 env 变体（仅放行 .example 模板）
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# 测试缓存
+.pytest_cache/
+*.egg-info
+test_hitl.db
+checkpoints.db
+checkpoints.db-wal
+checkpoints.db-shm
+smoke_test.db
+
+# 工具/IDE 状态目录（归类时补充）
+.mimosa/
+.idea/
+no_such_models_dir/
