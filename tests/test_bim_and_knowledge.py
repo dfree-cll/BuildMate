@@ -13,8 +13,8 @@ from sqlalchemy import text
 
 from backend.db.session import engine
 from backend.main import app
-from backend.services.ifc_parser import parse_ifc
-from backend.services.bim_review import run_rule_checks
+from backend.core.ifc_parser import parse_ifc
+from backend.core.bim_review import run_rule_checks
 from backend.db.schema import METADATA
 
 BASE = "/api/v1"
@@ -131,7 +131,7 @@ async def test_bim_review_scoped_to_owner(api):
 
 async def test_knowledge_pending_answer_loop(api):
     """知识闭环：插一条 pending 问题 → 教师答案入库 → 状态 resolved → chunk 可检索"""
-    from backend.services.vector_store import search
+    from backend.core.knowledge_base import search
     pid = str(uuid.uuid4())
     q = "塔吊 QTZ80 的最大起重量是多少？"
     async with engine.begin() as conn:

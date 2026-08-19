@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from langchain_core.documents import Document
 from langchain_text_splitters import MarkdownHeaderTextSplitter, MarkdownTextSplitter
 
-from backend.services.vector_store import add_chunks, clear_knowledge
+from backend.core.knowledge_base import add_chunks, clear_knowledge
 from backend.config import get_settings
 
 _MD_HEADER_SPLITTER = MarkdownHeaderTextSplitter(

@@ -33,9 +33,9 @@ async def respond_node(state: NegotiationState) -> dict:
     history = "\n".join(_msg_text(m)[:120] for m in state.get("messages", [])[-6:]) or "（开始谈判）"
     try:
         llm = get_llm("negotiation", temperature=0.3)
+        quotes_text = json.dumps(state.get("quotes", []), ensure_ascii=False)
         resp = await llm.ainvoke([HumanMessage(content=STAGE_RESPONSE_PROMPT.format(
-            stage=stage, stage_cn=STAGE_CN.get(stage, stage),
-            material=material, history=history, rounds=rounds))])
+            stage=stage, material=material, quotes=quotes_text, message=history))])
         answer = _msg_text(resp).strip()
     except Exception as e:
         logger.warning("negotiation.respond_failed", error=str(e)[:100])
@@ -60,7 +60,7 @@ async def check_stage_node(state: NegotiationState) -> dict:
             llm = get_llm("negotiation", temperature=0)
             last = _msg_text(state.get("messages", [])[-1]) if state.get("messages") else ""
             resp = await llm.ainvoke([HumanMessage(content=STAGE_TRANSITION_PROMPT.format(
-                stage=stage, stage_cn=STAGE_CN.get(stage, stage), last_round=last[:500]))])
+                stage=stage, last_message=last[:500]))])
             raw = _msg_text(resp).strip().upper()
             if "YES" in raw or "是" in raw[:20]:
                 next_idx = stage_index + 1

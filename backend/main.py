@@ -59,7 +59,7 @@ async def lifespan(app: FastAPI):
     try:
         from backend.core.reranker import BGEReranker
         from backend.core.query_classifier import QueryClassifier
-        from backend.services.vector_store import TextVectorizer
+        from backend.core.knowledge_base import TextVectorizer
         loop = _aio.get_running_loop()
         await _aio.gather(
             loop.run_in_executor(None, BGEReranker.get_instance),

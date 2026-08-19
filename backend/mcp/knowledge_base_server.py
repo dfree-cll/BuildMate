@@ -24,7 +24,7 @@ async def search_knowledge_base(
         tenant_id: 租户 ID（默认 tenant_default）
         top_k: 返回条数
     """
-    from backend.services.vector_store import search
+    from backend.core.knowledge_base import search
     from backend.core.reranker import rerank_results
     # 召回 8 条 → 精排 top_k
     candidates = await search(query, tenant_id=tenant_id, top_k=8)

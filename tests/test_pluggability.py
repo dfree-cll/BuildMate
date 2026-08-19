@@ -10,7 +10,7 @@ from langchain_core.outputs import ChatResult, ChatGeneration
 from backend.core.llm_factory import (
     LLMFactory, register_llm_provider, _PROVIDER_REGISTRY, _resolve_provider_name,
 )
-from backend.services.vector_store import (
+from backend.core.knowledge_base import (
     VectorBackend, register_vector_backend, _BACKENDS, _active_backends,
 )
 
@@ -71,7 +71,7 @@ def test_register_custom_vector_backend(monkeypatch):
 
     stub = register_vector_backend(_StubBackend())
     assert _BACKENDS["stub-test"] is stub or isinstance(_BACKENDS["stub-test"], _StubBackend)
-    monkeypatch.setattr("backend.services.vector_store.get_settings",
+    monkeypatch.setattr("backend.core.knowledge_base.get_settings",
                         lambda: type("S", (), {"vector_backend": "stub-test",
                                                "milvus_host": ""})())
     backends = _active_backends()
@@ -81,7 +81,7 @@ def test_register_custom_vector_backend(monkeypatch):
 
 async def test_vector_search_via_registered_backend(monkeypatch):
     """注册的后端真实参与检索调度"""
-    from backend.services.vector_store import search as vs_search, TextVectorizer
+    from backend.core.knowledge_base import search as vs_search, TextVectorizer
 
     async def _fake_embed(texts):
         return [[0.0] * 256 for _ in texts]
@@ -101,7 +101,7 @@ async def test_vector_search_via_registered_backend(monkeypatch):
             pass
 
     register_vector_backend(_FixedBackend())
-    monkeypatch.setattr("backend.services.vector_store.get_settings",
+    monkeypatch.setattr("backend.core.knowledge_base.get_settings",
                         lambda: type("S", (), {"vector_backend": "fixed-test",
                                                "milvus_host": ""})())
     results = await vs_search("螺纹钢价格")

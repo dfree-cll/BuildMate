@@ -22,7 +22,7 @@ if sys.platform == 'win32':
     sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.services import material_prices as mp
+from backend.core import material_prices as mp
 
 
 async def cmd_update(force: bool):

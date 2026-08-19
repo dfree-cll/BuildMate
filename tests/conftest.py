@@ -42,7 +42,7 @@ from sqlalchemy import text
 async def _seed_knowledge_if_empty() -> None:
     """知识库为空时灌入 data/knowledge + data/knowledge_real（幂等，只首个用例承担）"""
     from backend.db.session import engine
-    from backend.services.vector_store import add_chunks
+    from backend.core.knowledge_base import add_chunks
     from scripts.seed_knowledge import split_markdown_documents
 
     async with engine.connect() as conn:

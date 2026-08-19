@@ -15,7 +15,7 @@ from backend.agents.qa.prompts import (
 )
 from backend.core.llm_factory import get_llm
 from backend.core.llm_text import msg_text as _get_message_content
-from backend.services.vector_store import search
+from backend.core.knowledge_base import search
 from backend.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -112,7 +112,7 @@ def _extract_market(query: str) -> str:
 
 async def real_price_node(state: QAState) -> dict:
     """价格类问题：优先查真实行情表（material_prices），命中则直答，未命中回退正常检索"""
-    from backend.services.material_prices import query_prices, format_price_text
+    from backend.core.material_prices import query_prices, format_price_text
     query = state["original_query"]
     material = _extract_material(query)
     market = _extract_market(query)

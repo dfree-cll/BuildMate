@@ -124,8 +124,8 @@ async def bim_upload(file: UploadFile, current_user: dict = Depends(get_current_
                    "processing", file_name=file.filename)
 
     async def _run():
-        from backend.services.ifc_parser import parse_ifc
-        from backend.services.bim_review import run_bim_review
+        from backend.core.ifc_parser import parse_ifc
+        from backend.core.bim_review import run_bim_review
         try:
             parsed = await parse_ifc(tmp_path)
             await _persist(review_id, current_user["user_id"], current_user["tenant_id"],
