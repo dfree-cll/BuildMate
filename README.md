@@ -127,10 +127,14 @@ BuildMateDemo/
     core/
       orchestrator.py  # 单 Agent 直达 + 多 Agent Pipeline
       llm_factory.py   # LLM 工厂（Mock/真实双模式）
+      knowledge_base.py # 本地向量库（Milvus 可选后端，哈希向量降级）
+      reranker.py      # bge-reranker-large 精排
+      query_classifier.py  # 意图路由分类
+      pdf_parser.py / ifc_parser.py / bim_review.py / material_prices.py  # 领域服务
       retry.py         # 三层兜底（重试→降级→系统兜底）
       memory.py        # MemorySaver + thread_id
-      logger.py        # 结构化日志
-      exceptions.py    # 统一异常体系
+      observability.py # LLM 调用追踪（耗时/成本）
+      logger.py / exceptions.py / security.py / state_store.py / llm_text.py
     agents/
       qa/              # 知识问答（RAG：classify→retrieve→generate）
       bid_review/      # 投标审查（四维并行评审）
@@ -138,18 +142,26 @@ BuildMateDemo/
       negotiation/     # 供应商谈判（状态机）
     api/v1/
       unified_chat.py  # ★ 统一入口（_pre_filter + _llm_route + SSE 分发）
-      agents_api.py    # 各 Agent REST 接口
+      bid_review.py    # 标书审查 REST 接口
+      procurement.py   # 采购审批 REST 接口
+      negotiation.py   # 谈判 SSE 接口
+      qa.py            # 问答 + 知识待补闭环接口
+      bim_api.py       # BIM 审图接口
       auth.py          # 登录
-    services/
-      vector_store.py  # 本地向量库（哈希向量降级）
-    db/session.py      # SQLAlchemy 异步会话（SQLite）
+    mcp/
+      knowledge_base_server.py / web_search_server.py / client.py
+    db/
+      dialect.py       # SQLite ↔ PostgreSQL 方言自适应
+      schema.py        # SQLAlchemy 模型
+      session.py       # 异步会话
+    data/mock/         # 模拟用户（admin/buyer/project）
   scripts/
     init_db.py         # 建表 + 模拟用户
     seed_knowledge.py  # 知识库灌入
     start_all.py       # 一键启动
   data/knowledge/      # 建筑行业知识库（建材价格/规范/政策/施工方案）
   frontend/static/     # 前端页面（SSE 客户端）
-  tests/test_smoke.py  # 端到端冒烟测试（9 场景）
+  tests/               # 单元 + HITL + 冒烟测试（51 用例）
 ```
 
 ## EduAgent 架构完善记录（2026-08）
@@ -265,7 +277,7 @@ cd frontend && npm install && npm run dev
 
 已完成的代码层改造（Docker 引擎启动后即生效）：
 1. backend/db/dialect.py：SQLite ↔ PostgreSQL 方言自适应，所有 upsert 自动选择合适语法
-2. backend/services/vector_store.py：Milvus 可选后端（配置 MILVUS_HOST 且可连接时使用）
+2. backend/core/knowledge_base.py：Milvus 可选后端（配置 MILVUS_HOST 且可连接时使用）
 3. backend/config.py：新增 milvus_host/milvus_port 配置
 4. init_db.py：用户灌入方言自适应
 
@@ -320,7 +332,7 @@ PostgreSQL/Milvus 实连验证在正常环境进行。SQLite 模式已回归验�
 | 1 | **Reranker 精排** | `backend/core/reranker.py`：加载 bge-reranker-large（CPU），Hybrid 召回 8 条 → 精排 top3 + 置信度（0.75 阈值） |
 | 2 | **意图分类器** | `backend/core/query_classifier.py`：MiniLM 微调版（general/specialized）+ 规则快通道三层分类 |
 | 3 | **MCP 工具层** | `backend/mcp/`：知识库检索 + 联网搜索两个 FastMCP Server（独立进程 :8001/:8002）+ client.py JSON-RPC 调用 |
-| 4 | **PDF 解析** | `backend/services/pdf_parser.py`：PyMuPDF 双栏解析 + `POST /bid-review/upload` 上传接口 |
+| 4 | **PDF 解析** | `backend/core/pdf_parser.py`：PyMuPDF 双栏解析 + `POST /bid-review/upload` 上传接口 |
 | 5 | **数据库迁移** | `backend/db/migrations.py`：幂等补丁（SQLite 兼容：先查列再 ALTER）+ lifespan 启动执行 |
 
 ### 启动时本地模型预热（lifespan）
@@ -351,7 +363,7 @@ D:/develop/anaconda3/envs/EduAgent/python.exe backend/mcp/web_search_server.py  
 | 组件 | EduAgent 原版 | 本 Demo |
 |---|---|---|
 | 数据库 | PostgreSQL + asyncpg | SQLite + aiosqlite（改 DATABASE_URL 即可切回） |
-| 向量库 | Milvus + BGE-M3 | 本地哈希向量（改 `vector_store.py` 可切真实嵌入） |
+| 向量库 | Milvus + BGE-M3 | 本地哈希向量（改 `knowledge_base.py` 可切真实嵌入） |
 | 意图分类 | MiniLM-L6-v2 本地模型 | 规则 + LLM 路由（`_llm_route`） |
 | 精排 | BGE-Reranker | 无（demo 用召回分数直排） |
 | 记忆 | MemorySaver + qa_sessions 表 | MemorySaver（同构） |
