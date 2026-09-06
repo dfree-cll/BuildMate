@@ -52,16 +52,13 @@ BuildMateDemo/
 # 1. 配置环境（不填 LLM_API_KEY 即使用离线 Mock 模式）
 Copy-Item .env.example .env
 
-# 2. 安装后端与测试依赖
+# 2. 安装后端依赖
 python -m venv .venv
 .\.venv\Scripts\python -m pip install -r requirements.txt
 
 # 3. 初始化本地数据库与知识库
 .\.venv\Scripts\python scripts/init_db.py
 .\.venv\Scripts\python scripts/seed_knowledge.py
-
-# （可选）仅 local/test 且明确确认时重置演示库
-.\.venv\Scripts\python scripts/reset_demo_db.py --confirm RESET_DEMO_DB
 
 # 4. 启动后端
 .\.venv\Scripts\python -m uvicorn backend.main:app --reload --port 8000
@@ -145,15 +142,17 @@ Bridge 默认 `validate-only`。启用真实写入前必须配置审批密钥，
 
 DXF 可直接处理；DWG 转换器是可选的 Windows 外部依赖，需通过 `ODA_FILE_CONVERTER` 显式配置。
 
-## 测试与质量检查
+## 质量检查
 
 ~~~powershell
-.\.venv\Scripts\python -m pytest -q --basetemp .pytest_tmp
 .\.venv\Scripts\python -m pip check
 docker compose config --quiet
+cd frontend
+npm ci
+npm run build
 ~~~
 
-通过数以当前 CI 输出为准，不在文档中维护容易失真的手工数字。测试临时目录与运行时产物均已被 Git 忽略；回归 fixture 不依赖个人 `data/runtime` 文件。
+构建产物和运行时数据均可再生，不纳入版本控制。
 
 ## 当前文档
 

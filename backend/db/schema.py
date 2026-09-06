@@ -4,7 +4,7 @@
 vector_store.py 各自为政——现在统一到这里，供三处消费：
   ① Alembic 迁移（migrations/env.py 的 target_metadata）
   ② init_db.py（METADATA.create_all，demo/离线快速建库）
-  ③ 测试夹具（conftest 直接 create_all）
+  ③ 本地初始化脚本直接 create_all
 
 注意：与运行时手写 SQL 的兼容性——列名/类型/约束必须与各 upsert SQL 保持一致
 （dialect.py、agents_api.py 等）。修改本文件后用 `alembic revision --autogenerate`

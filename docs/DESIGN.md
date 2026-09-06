@@ -84,7 +84,6 @@ flowchart TB
 | M16 | 审核端 | 待审核业务与知识待补 |
 | M17 | 基础设施与可观测性 | 本地/生产适配、指标、日志和 Trace |
 | M18 | 安全与合规 | RBAC、RLS、ACL、敏感数据和审计 |
-| M19 | 测试与发布治理 | Fixture、回归、评估、CI 和回滚 |
 
 ### 3.3 核心用户链路
 
@@ -199,7 +198,6 @@ frontend/
   src/stores/      Pinia 领域状态
   src/api/         API 客户端
 workers/revit_bridge/  Windows Bridge
-tests/             单元、合同、集成和端到端测试
 docs/design/modules/   功能模块设计文件
 ```
 
@@ -263,4 +261,3 @@ docs/design/modules/   功能模块设计文件
 - [M16 审核端](design/modules/M16_REVIEW.md)
 - [M17 基础设施与可观测性](design/modules/M17_INFRA_OBSERVABILITY.md)
 - [M18 安全与合规](design/modules/M18_SECURITY_COMPLIANCE.md)
-- [M19 测试与发布治理](design/modules/M19_TEST_RELEASE.md)

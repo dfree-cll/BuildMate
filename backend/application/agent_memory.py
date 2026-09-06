@@ -28,7 +28,7 @@ class MemoryState(TypedDict, total=False):
 
 
 def state_context(state: dict) -> RequestContext | None:
-    # Bare node unit tests/offline utilities may have no authenticated context.
+    # Standalone offline utilities may have no authenticated context.
     # Production entrypoints always supply both IDs; never default to another user.
     if not state.get("user_id") or not state.get("tenant_id"):
         return None

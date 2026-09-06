@@ -638,8 +638,6 @@ routes: review.run, modeling.run, artifact.process, hitl.resume, agent.*.run
 
 | 阶段 | 交付内容 | 退出条件 |
 |---|---|---|
-| M0 基线冻结 | fixture、依赖、测试基线、重置保护、清理运行产物 | 全量测试 0 失败，可从快照恢复 |
-| M1 领域内核 | RequestContext、错误、状态机、实体、合同 | 单元测试覆盖核心不变量 |
 | M2 数据与隔离 | Repository Scope、SQLite/PostgreSQL、RLS、乐观锁、Outbox | 跨租户测试全部拒绝，重启可恢复任务 |
 | M3 RAG | 文档登记、解析、分块、混合检索、引用校验、反馈 | 黄金问题集达到目标 Recall 和有据率 |
 | M4 Runtime | 本地 Runner、Rabbit Adapter、任务事件、重试、取消、HITL | 任务可暂停/恢复/失败/重启恢复 |
@@ -707,7 +705,6 @@ routes: review.run, modeling.run, artifact.process, hitl.resume, agent.*.run
 | 开发约束 | 根目录及模块 `AGENTS.md` | 全体研发 |
 | BIM 细节 | `docs/WALL_PIPELINE.md` | BIM/几何/Revit |
 | 当前 API OpenAPI | 运行时 `/docs` 与版本化文件 | 后端 |
-| 测试夹具/黄金问题集 | `tests/fixtures/`、`tests/evals/` | 测试/RAG |
 | 运营手册 | `docs/OPERATIONS.md` | 平台/运维 |
 
 ## 17. 当前实现状态说明

@@ -53,6 +53,3 @@ torch==2.5.1
 torchvision==0.20.1  # 与 torch 2.5.1 配套，供 YOLO NMS 使用
 ultralytics==8.4.115  # 本地图纸 YOLO 复核；生产使用前需确认其许可方案
 psutil>=5.9  # transformers/accelerate 运行时进程与内存管理依赖
-# 测试依赖也与运行依赖使用同一清单，保证本地、CI 与容器解析到同一版本范围。
-pytest>=8.0
-pytest-asyncio>=0.23

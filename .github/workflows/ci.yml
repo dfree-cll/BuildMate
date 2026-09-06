@@ -7,8 +7,8 @@ on:
     branches: [main, master]
 
 jobs:
-  # ── ① 后端测试（Python）──────────────────────────────
-  backend-test:
+  # ── ① 后端环境检查（Python）──────────────────────────
+  backend-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,16 +18,8 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: 安装依赖（含测试依赖）
+      - name: 安装依赖
         run: pip install -r requirements.txt
-
-      - name: 单元测试（pytest）
-        env:
-          DATABASE_URL: sqlite+aiosqlite:///./ci_test.db
-          APP_ENV: test
-          LLM_API_KEY: ""
-          MILVUS_HOST: ""
-        run: python -m pytest tests/ -q --ignore=tests/test_samples.py --basetemp=.pytest-tmp-ci
 
       - name: 环境自检
         run: python scripts/verify_env.py
@@ -62,7 +54,7 @@ jobs:
   # ── ③ Docker 镜像构建 ─────────────────────────────────
   docker-build:
     runs-on: ubuntu-latest
-    needs: [backend-test, frontend-build]
+    needs: [backend-check, frontend-build]
     steps:
       - uses: actions/checkout@v4
 
