@@ -4,7 +4,7 @@
 - H3：谈判总结报告真实换行（不再出现字面量 \n）
 - H2：客户端传入 order_no 被忽略（服务端生成），不可伪造他人单号覆盖
 - H2：purchase_orders upsert 改 ON CONFLICT 后保留 id/created_at（旧 INSERT OR REPLACE 会重置）
-- H4：teacher01 角色可访问待审批列表（角色此前名存实亡），buyer 仍 403
+- H4：reviewer01 角色可访问待审批列表，buyer 仍 403
 - M6：路由 JSON 解析容错 code fence
 - M7：前置拦截不再误伤"你是谁家的供应商"类长句，仍拦截纯身份/能力问句
 - H6：PyJWT 签发/校验（所有 API 用例的登录 token 隐式覆盖）
@@ -128,9 +128,9 @@ async def test_purchase_upsert_preserves_id_and_created_at():
     assert str(row[3]).startswith("2026-01-01"), "created_at 不应被重置"
 
 
-async def test_teacher_role_can_approve_view(api):
-    """H4：teacher01 可访问待审批列表（此前 teacher 角色名存实亡），buyer 仍 403"""
-    t = await _login(api, "teacher01")
+async def test_reviewer_role_can_approve_view(api):
+    """H4：reviewer01 可访问待审批列表，buyer 仍 403"""
+    t = await _login(api, "reviewer01")
     r = await api.get(f"{BASE}/procurement/pending", headers=t)
     assert r.status_code == 200, r.text
     b = await _login(api, "buyer01")

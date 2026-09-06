@@ -20,7 +20,7 @@ export const useAuthStore = defineStore('auth', {
     async login(username: string, password: string) {
       const r = await apiLogin(username, password)
       this.token = r.access_token
-      this.user = { username, role: r.role, user_id: r.user_id }
+      this.user = { username, role: r.role, user_id: r.user_id, tenant_id: r.tenant_id }
       localStorage.setItem('bm_token', r.access_token)
       if (r.refresh_token) localStorage.setItem('bm_refresh', r.refresh_token)
       localStorage.setItem('bm_user', JSON.stringify(this.user))

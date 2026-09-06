@@ -4,11 +4,20 @@ __pycache__/
 *.pyc
 node_modules/
 frontend/node_modules/
+frontend/static/
 frontend/static_old/
 buildmate.db
 *.db
 *.log
 _server*.log
 .env
-data/knowledge_real/  # 真实法规数据在容器启动时重新抓取
+# 本地上传、测试产物与开发缓存不属于镜像运行时输入；上传后由卷或对象存储提供。
+.pytest_cache/
+.pytest_tmp_*/
+data/uploads/
+data/uploads_v2/
+data/generated/
+data/runtime/
+# 真实法规数据在容器启动时重新抓取
+data/knowledge_real/
 vendor/

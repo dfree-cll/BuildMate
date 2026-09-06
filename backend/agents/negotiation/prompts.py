@@ -18,3 +18,21 @@ STAGE_TRANSITION_PROMPT = """判断当前谈判是否满足进入下一阶段的
 
 当前阶段：{stage}
 最近对话：{last_message}"""
+
+# 会议纪要生成（谈判结束 / 中途生成）
+MEETING_MINUTES_PROMPT = """你是商务谈判记录员。基于以下谈判对话记录，生成一份**会议纪要**（给采购方决策人看），输出 JSON：
+{{"basic": {{"subject": "谈判标的", "parties": "参与方", "stages": "已进行阶段"}},
+  "stage_minutes": [{{"stage": "阶段名", "content": "该阶段讨论了什么、报价/让步/承诺等关键信息"}}],
+  "agreements": ["达成的共识，如价格/工期/质保条款"],
+  "open_items": ["未决事项/分歧，如质保金比例未定"],
+  "key_info": ["分包商核心诉求/底线/能力亮点"],
+  "suggestion": "给决策者的建议（是否接受、可签约价、风险提示）",
+  "next_steps": ["下一步行动"]}}
+
+注意：纪要只记录对话中**实际出现**的信息，不要编造；没有的内容写"未涉及"。
+
+谈判标的：{material}
+各阶段摘要：{quotes}
+对话记录：
+{conversation}
+只输出 JSON。"""

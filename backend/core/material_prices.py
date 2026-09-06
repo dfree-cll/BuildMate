@@ -146,22 +146,6 @@ _SINA_FUTURES = [
     ("铜", "nf_CU0"),
 ]
 
-# ── 建表 SQL（跨方言）──────────────────────────────────
-MATERIAL_PRICES_DDL = """CREATE TABLE IF NOT EXISTS material_prices (
-    id TEXT PRIMARY KEY,
-    material VARCHAR(64) NOT NULL,
-    spec VARCHAR(64) NOT NULL DEFAULT '',
-    market VARCHAR(64) NOT NULL,
-    price_low DECIMAL(12,2) NOT NULL,
-    price_high DECIMAL(12,2) NOT NULL,
-    unit VARCHAR(16) NOT NULL DEFAULT '元/吨',
-    price_date VARCHAR(16),
-    source VARCHAR(64) NOT NULL,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (material, spec, market, source)
-)"""
-
-
 def upsert_material_price_sql() -> str:
     """material_prices upsert（SQLite: INSERT OR REPLACE；PG: ON CONFLICT）"""
     if is_postgres():

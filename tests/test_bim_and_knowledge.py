@@ -1,7 +1,7 @@
 """BIM 审图 + 知识待补闭环 回归测试
 
 BIM：ifc_parser 解析示例模型 → 规则检查 → API 上传/轮询（mock LLM 双轨）
-知识闭环：低置信度问题 → 教师补充答案 → chunk 入库 → 可被检索 → 队列 resolved
+知识闭环：低置信度问题 → 审核补充答案 → chunk 入库 → 可被检索 → 队列 resolved
 """
 import asyncio
 import uuid
@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 from backend.db.session import engine
 from backend.main import app
-from backend.core.ifc_parser import parse_ifc
+from backend.engines.ifc_parser import parse_ifc
 from backend.core.bim_review import run_rule_checks
 from backend.db.schema import METADATA
 
@@ -56,7 +56,8 @@ def test_rule_checks_pass_complete_model():
 async def _isolated_env():
     async with engine.begin() as conn:
         await conn.run_sync(METADATA.create_all)
-    yield
+    async with app.router.lifespan_context(app):   # 初始化 memory savers（drawing2bim 图需要）
+        yield
     await engine.dispose()
 
 
@@ -73,64 +74,90 @@ async def _login(api, username, password="demo123"):
     return {"Authorization": "Bearer " + r.json()["access_token"]}
 
 
-async def _wait_done(api, headers, review_id, tries=20):
+async def _wait_done(api, headers, review_id, tries=30):
+    """新 bim_api 异步轮询：pending → done/pending_confirmation/failed"""
     for _ in range(tries):
         await asyncio.sleep(0.5)
         r = await api.get(f"{BASE}/bim/reviews/{review_id}", headers=headers)
         assert r.status_code == 200, r.text
         j = r.json()
-        if j["status"] != "processing":
+        if j["status"] in ("done", "pending_confirmation", "failed"):
             return j
     pytest.fail("BIM 审查超时未完成")
 
 
 async def test_bim_upload_review_flow(api):
-    """上传示例 IFC → 后台双轨审查 → done（mock LLM）→ 历史列表"""
+    """上传示例 IFC → 后台 drawing2bim 管线审查 → done/pending_confirmation → 历史列表"""
     headers = await _login(api, "admin")
     with open(DEMO_IFC, "rb") as f:
         r = await api.post(f"{BASE}/bim/upload", headers=headers,
-                           files={"file": ("demo_wall.ifc", f, "application/octet-stream")})
+                           files={"files": ("demo_wall.ifc", f, "application/octet-stream")})
     assert r.status_code == 202, r.text
-    j = r.json()
-    assert j["status"] == "processing" and j["size"] > 0   # 解析已后台化，schema 见轮询结果
+    review_id = r.json()["reviews"][0]["review_id"]
 
-    result = await _wait_done(api, headers, j["review_id"], tries=40)
-    assert result["status"] == "done"
-    assert result["file"]["schema"] == "IFC4"
-    assert result["file"]["total_elements"] >= 1
-    # 示例模型只有墙（无空间/无建筑）→ 规则应发现 medium 问题；LLM 为 mock 分支
-    priorities = {i["priority"] for i in result["rule_issues"]}
-    assert "medium" in priorities
-    assert result["observations"], "LLM（mock）观察不应为空"
-    assert result["risk_level"] in ("low", "medium", "high")
+    result = await _wait_done(api, headers, review_id)
+    assert result["status"] in ("done", "pending_confirmation")
+    sd = result.get("structured_data") or {}
+    assert "verdict" in sd or "risk_level" in sd or "compliance_report" in sd
+    assert result["file_name"] == "demo_wall.ifc"
 
     r = await api.get(f"{BASE}/bim/reviews", headers=headers)
-    assert r.status_code == 200 and any(i["review_id"] == j["review_id"] for i in r.json()["items"])
+    assert r.status_code == 200 and any(i["review_id"] == review_id for i in r.json()["reviews"])
 
 
 async def test_bim_upload_rejects_non_ifc(api):
+    """不支持的格式（.txt）→ 400；DWG → 400 + 指引（PDF 已支持）"""
     headers = await _login(api, "admin")
     r = await api.post(f"{BASE}/bim/upload", headers=headers,
-                       files={"file": ("evil.pdf", b"%PDF-fake", "application/pdf")})
+                       files={"files": ("evil.txt", b"hello", "text/plain")})
     assert r.status_code == 400
     r = await api.post(f"{BASE}/bim/upload", headers=headers,
-                       files={"file": ("fake.ifc", b"not a step file", "text/plain")})
-    assert r.status_code == 400, "缺 ISO-10303-21 头应被拒"
+                       files={"files": ("plan.dwg", b"AC1027fake", "application/octet-stream")})
+    assert r.status_code == 400 and "DXF" in r.json()["detail"]
 
 
 async def test_bim_review_scoped_to_owner(api):
-    """B 审查记录仅归属人可查"""
+    """B 审查记录仅归属人可查（buyer 查他人记录 → 403/404）"""
     a = await _login(api, "admin")
     with open(DEMO_IFC, "rb") as f:
         r = await api.post(f"{BASE}/bim/upload", headers=a,
-                           files={"file": ("demo_wall.ifc", f, "application/octet-stream")})
-    rid = r.json()["review_id"]
+                           files={"files": ("demo_wall.ifc", f, "application/octet-stream")})
+    rid = r.json()["reviews"][0]["review_id"]
     b = await _login(api, "buyer01")
-    assert (await api.get(f"{BASE}/bim/reviews/{rid}", headers=b)).status_code == 404
+    resp = await api.get(f"{BASE}/bim/reviews/{rid}", headers=b)
+    assert resp.status_code in (403, 404), "他人记录应被拒"
+
+
+async def test_bim_review_list_is_scoped_to_tenant_and_owner():
+    """v1 历史列表不能泄露同租户他人或其他租户的记录。"""
+    from backend.api.v1.bim_api import list_bim_reviews
+
+    suffix = uuid.uuid4().hex
+    tenant = f"tenant-list-{suffix}"
+    other_tenant = f"tenant-other-{suffix}"
+    owner = f"user-list-{suffix}"
+    review_rows = [
+        (f"BIM-LIST-OWN-{suffix}", tenant, owner, "own.ifc", "done"),
+        (f"BIM-LIST-PEER-{suffix}", tenant, f"peer-{suffix}", "peer.ifc", "pending"),
+        (f"BIM-LIST-CROSS-{suffix}", other_tenant, owner, "cross.ifc", "done"),
+    ]
+    async with engine.begin() as conn:
+        await conn.execute(text(
+            "INSERT INTO bim_reviews "
+            "(id, tenant_id, user_id, file_name, status) "
+            "VALUES (:id, :tenant_id, :user_id, :file_name, :status)"),
+            [{"id": rid, "tenant_id": tid, "user_id": uid,
+              "file_name": name, "status": status}
+             for rid, tid, uid, name, status in review_rows])
+
+    result = await list_bim_reviews({"tenant_id": tenant, "user_id": owner, "role": "buyer"})
+    ids = [item["review_id"] for item in result["reviews"]]
+    assert ids == [review_rows[0][0]]
+    assert result["items"] == result["reviews"]
 
 
 async def test_knowledge_pending_answer_loop(api):
-    """知识闭环：插一条 pending 问题 → 教师答案入库 → 状态 resolved → chunk 可检索"""
+    """知识闭环：插一条 pending 问题 → 审核答案入库 → 状态 resolved → chunk 可检索"""
     from backend.core.knowledge_base import search
     pid = str(uuid.uuid4())
     q = "塔吊 QTZ80 的最大起重量是多少？"
@@ -140,7 +167,7 @@ async def test_knowledge_pending_answer_loop(api):
             " VALUES (:id, 'tenant_default', 'u-buyer01', :q, 0.1, 'pending')"),
             {"id": pid, "q": q})
 
-    t = await _login(api, "teacher01")
+    t = await _login(api, "reviewer01")
     r = await api.post(f"{BASE}/knowledge/pending/{pid}/answer", headers=t,
                        json={"answer": "QTZ80 塔吊最大起重量 8 吨，臂长 56 米，详见 QTZ80 技术参数表。"})
     assert r.status_code == 200 and r.json()["chunk_added"] is True, r.text

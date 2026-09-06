@@ -17,7 +17,7 @@ from backend.config import get_settings
 from backend.core.logger import get_logger
 from backend.core.security import hash_password, verify_password
 from backend.core.state_store import state_store
-from backend.data.mock.mock_users import mock_verify
+from data.mock.mock_users import mock_verify
 from backend.db.session import engine
 from backend.dependencies import get_current_user, _JTI_SET, _VER_PREFIX
 
@@ -51,6 +51,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     role: str
     user_id: str
+    tenant_id: str = "tenant_default"
     expires_in: int = 0   # 访问令牌有效秒数
 
 
@@ -120,7 +121,7 @@ async def login(req: LoginRequest, request: Request):
     return TokenResponse(
         access_token=_create_token(claims, settings.access_token_minutes, "access"),
         refresh_token=_create_token(claims, settings.refresh_token_days * 24 * 60, "refresh"),
-        role=user["role"], user_id=user["user_id"],
+        role=user["role"], user_id=user["user_id"], tenant_id=user["tenant_id"],
         expires_in=settings.access_token_minutes * 60,
     )
 
@@ -167,7 +168,7 @@ async def refresh_tokens(req: RefreshRequest):
     return TokenResponse(
         access_token=_create_token(claims, settings.access_token_minutes, "access"),
         refresh_token=_create_token(claims, settings.refresh_token_days * 24 * 60, "refresh"),
-        role=role, user_id=str(user_id),
+        role=role, user_id=str(user_id), tenant_id=tenant,
         expires_in=settings.access_token_minutes * 60,
     )
 

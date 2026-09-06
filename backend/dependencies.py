@@ -73,7 +73,7 @@ async def get_current_user(
 
 
 def require_role(*roles: str):
-    """角色校验依赖：require_role("admin") 或 require_role("admin", "teacher")
+    """角色校验依赖：require_role("admin") 或 require_role("admin", "reviewer")
     用法：current_user: dict = Depends(require_role("admin"))
     """
     async def _checker(current_user: dict = Depends(get_current_user)) -> dict:

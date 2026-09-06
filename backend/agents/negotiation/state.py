@@ -18,7 +18,10 @@ STAGE_ORDER = [NegotiationStage.QUOTE, NegotiationStage.TECH,
                 NegotiationStage.DELIVERY, NegotiationStage.SIGN, NegotiationStage.DONE]
 
 
-class NegotiationState(TypedDict):
+from backend.application.agent_memory import MemoryState
+
+
+class NegotiationState(MemoryState):
     messages: Annotated[list[BaseMessage], add_messages]
     user_id: str
     tenant_id: str

@@ -1,10 +1,9 @@
 # BuildMate Demo 生产基础设施（对齐行业范式 3.1 docker-compose）
 # 启动：docker compose up -d
 # 说明：demo 默认用 SQLite 可直接运行；此文件供生产/性能测试启用 PostgreSQL + Milvus
-version: "3.9"
 
 services:
-  # ── PostgreSQL 业务数据库（对外 5433，避开本机 5432）──
+  # ── PostgreSQL 业务数据库（对外 5434，避开本机 5432）──
   postgres:
     image: postgres:15-alpine
     container_name: buildmate_postgres
@@ -18,11 +17,45 @@ services:
       - "127.0.0.1:5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./ops/postgres-init.sql:/docker-entrypoint-initdb.d/10-buildmate-app.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U buildmate -d buildmate"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: buildmate_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: buildmate_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: buildmate
+      RABBITMQ_DEFAULT_PASS: buildmate_queue_change_me
+    ports:
+      - "127.0.0.1:5673:5672"
+      - "127.0.0.1:15673:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   # ── etcd（Milvus 元数据，内部）──
   etcd:
@@ -42,17 +75,31 @@ services:
     image: minio/minio:latest
     container_name: buildmate_minio
     restart: unless-stopped
-    command: server /data
+    command: server /data --console-address :9001
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 15s
       timeout: 5s
       retries: 5
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        mc mb --ignore-existing local/buildmate-artifacts
 
   # ── Milvus 向量库（对外 19531）──
   milvus:
@@ -82,11 +129,26 @@ services:
 
   # ── BuildMate 后端（镜像内已含前端静态产物，单端口 8000）──
   backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: buildmate:models
     container_name: buildmate_backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+asyncpg://buildmate:buildmate123@postgres:5432/buildmate
+      DATABASE_URL: postgresql+asyncpg://buildmate_app:buildmate_app_change_me@postgres:5432/buildmate
+      MIGRATION_DATABASE_URL: postgresql+asyncpg://buildmate:buildmate123@postgres:5432/buildmate
+      APP_ENV: production
+      TASK_QUEUE_BACKEND: rabbitmq
+      RABBITMQ_URL: amqp://buildmate:buildmate_queue_change_me@rabbitmq:5672/
+      REDIS_URL: redis://redis:6379/0
+      ARTIFACT_STORAGE_BACKEND: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: buildmate-artifacts
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: buildmate-backend
       MILVUS_HOST: milvus
       MILVUS_PORT: 19530
       LLM_API_KEY: ${LLM_API_KEY:-}
@@ -94,9 +156,13 @@ services:
       LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 未设置：请在环境或项目 .env 提供强随机密钥}
       MODELS_ROOT: /models
+      BIM_JSON_IN: /app/data/runtime/revit/json_in
+      REVIT_OUTPUT_DIR: /app/data/runtime/revit/rvt_out
     volumes:
       # 本地模型（BGE-M3/Reranker/分类器）——宿主机路径按需修改
       - ${MODELS_PATH:-./models}:/models
+      # 与 Windows Revit 宿主机共享的建模输入/输出目录
+      - ./data/runtime/revit:/app/data/runtime/revit
     ports:
       - "8000:8000"
     depends_on:
@@ -104,14 +170,134 @@ services:
         condition: service_healthy
       milvus:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
       retries: 10
 
+  outbox-publisher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: buildmate:models
+    container_name: buildmate_outbox_publisher
+    restart: unless-stopped
+    command: ["python", "-m", "backend.workers.outbox_publisher"]
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://buildmate:buildmate123@postgres:5432/buildmate
+      RABBITMQ_URL: amqp://buildmate:buildmate_queue_change_me@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: buildmate.tasks
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 未设置}
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  workflow-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: buildmate:models
+    container_name: buildmate_workflow_worker
+    restart: unless-stopped
+    command: ["python", "-m", "backend.workers.rabbitmq_worker"]
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+asyncpg://buildmate_app:buildmate_app_change_me@postgres:5432/buildmate
+      RABBITMQ_URL: amqp://buildmate:buildmate_queue_change_me@rabbitmq:5672/
+      RABBITMQ_EXCHANGE: buildmate.tasks
+      REDIS_URL: redis://redis:6379/0
+      ARTIFACT_STORAGE_BACKEND: s3
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: buildmate-artifacts
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 未设置}
+      MODELS_ROOT: /models
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: buildmate-workflow-worker
+    volumes:
+      - ${MODELS_PATH:-./models}:/models
+    depends_on:
+      backend:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: buildmate_prometheus
+    restart: unless-stopped
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: buildmate_loki
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/config.yml"]
+    volumes:
+      - ./ops/loki.yml:/etc/loki/config.yml:ro
+      - loki_data:/loki
+    ports:
+      - "127.0.0.1:3100:3100"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.108.0
+    container_name: buildmate_otel
+    restart: unless-stopped
+    command: ["--config=/etc/otel/config.yml"]
+    volumes:
+      - ./ops/otel-collector.yml:/etc/otel/config.yml:ro
+    ports:
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: buildmate_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: buildmate_grafana_change_me
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./ops/grafana-datasources.yml:/etc/grafana/provisioning/datasources/buildmate.yml:ro
+    ports:
+      - "127.0.0.1:3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+
 volumes:
   postgres_data:
   etcd_data:
   minio_data:
   milvus_data:
+  redis_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:

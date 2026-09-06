@@ -1,0 +1,11 @@
+{
+  "schema_version": "buildmate.wall-pipeline-trained-profiles/1.0",
+  "profiles": {
+    "6b54b3fd8663871b8805ae9f7e95c80294d9ae7a95817040122a0600682fac93": {
+      "model_path": "data/approved_profiles/6b54b3fd8663871b8805ae9f7e95c80294d9ae7a95817040122a0600682fac93/wall_model.json",
+      "model_sha256": "f4ef1d38093a7632aac235d5803503057bf51d71e52de35e60923bc72c1be543",
+      "source_sha256": "985558e994965f16a69273a4ad20358cc8b451f2d67d1466f026a45a55272f96",
+      "minimum_axis_match_ratio": 0.75
+    }
+  }
+}

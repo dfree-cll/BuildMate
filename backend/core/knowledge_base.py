@@ -3,147 +3,34 @@
 - 无 key：字符哈希向量（n-gram + TF），离线可跑，效果足够 demo 演示
 - 存储：SQLite 表 knowledge_chunks（json 持久化向量），进程内缓存
 """
-import asyncio
 import hashlib
 import json
-import math
-import re
 import time
 
 from sqlalchemy import text
 from backend.db.session import engine
+from backend.db.schema import METADATA, knowledge_chunks
 from backend.core.logger import get_logger
 from backend.config import get_settings
 
 logger = get_logger(__name__)
 
-DIM = 256  # 哈希向量维度
-
-class TextVectorizer:
-    """文本向量化：优先 API 嵌入，降级字符哈希。"""
-    _client = None
-
-    @staticmethod
-    def _hash_vec(text: str) -> list[float]:
-        """字符 n-gram 哈希向量（词袋 + 局部敏感哈希风格），离线可用。"""
-        vec = [0.0] * DIM
-        tokens = re.findall(r"[\u4e00-\u9fa5]|[a-zA-Z0-9]+", text.lower())
-        for tok in tokens:
-            grams = [tok[i:i+2] for i in range(max(1, len(tok) - 1))] or [tok]
-            for g in grams:
-                h = int(hashlib.md5(g.encode()).hexdigest()[:8], 16)
-                vec[h % DIM] += 1.0
-        norm = math.sqrt(sum(v * v for v in vec)) or 1.0
-        return [v / norm for v in vec]
-
-    _local_model = None          # 本地 BGE 模型单例
-    _local_tokenizer = None
-
-    @classmethod
-    async def embed(cls, texts: list[str]) -> list[list[float]]:
-        settings = get_settings()
-        # ① 优先本地 BGE 中文模型（免费、离线、语义向量，BGE-M3 语义向量）
-        try:
-            return await cls._local_bge_embed(texts)
-        except Exception as e:
-            logger.warning("vectorizer.local_fallback", error=str(e))
-        # ② API 嵌入
-        if settings.embedding_api_key:
-            try:
-                return await cls._api_embed(texts)
-            except Exception as e:
-                logger.warning("vectorizer.api_fallback", error=str(e))
-        # ③ 字符哈希兜底
-        return [cls._hash_vec(t) for t in texts]
-
-    @classmethod
-    def _get_local_bge(cls):
-        """懒加载本地 BGE 模型（优先完整版 bge-m3，后备 bge-small-zh）"""
-        import os
-        if cls._local_model is not None:
-            return cls._local_model, cls._local_tokenizer
-        from transformers import AutoModel, AutoTokenizer
-        # 候选路径：① MODELS_ROOT（config.models_root，容器挂载 /models）② HF 缓存 bge-small-zh
-        from backend.config import get_settings as _gs_root
-        _models_root = _gs_root().models_root
-        candidates = [
-            os.path.join(_models_root, "embedding", "bge-m3"),
-        ]
-        model_dir = None
-        for cand in candidates:
-            if os.path.isdir(cand):
-                if "snapshots" in cand:
-                    snaps = sorted(os.listdir(cand))
-                    if snaps:
-                        model_dir = os.path.join(cand, snaps[-1])
-                else:
-                    model_dir = cand
-                if model_dir and os.path.isfile(os.path.join(model_dir, "config.json")):
-                    break
-        if not model_dir:
-            raise FileNotFoundError("本地 BGE 模型未找到")
-        cls._local_tokenizer = AutoTokenizer.from_pretrained(model_dir)
-        cls._local_model = AutoModel.from_pretrained(model_dir)
-        cls._local_model.eval()
-        logger.info("vectorizer.local_bge_loaded", model_dir=model_dir)
-        return cls._local_model, cls._local_tokenizer
-
-    @classmethod
-    async def _local_bge_embed(cls, texts: list[str]) -> list[list[float]]:
-        """本地 BGE 模型嵌入（CLS 池化 + L2 归一化，对齐 BGE 官方用法）"""
-        import torch
-        loop = asyncio.get_running_loop()
-        model, tokenizer = cls._get_local_bge()
-
-        def _encode():
-            with torch.no_grad():
-                encoded = tokenizer(texts, padding=True, truncation=True, max_length=512, return_tensors="pt")
-                outputs = model(**encoded)
-                # CLS 池化（BGE 官方：取 last_hidden_state[:, 0]）；先 .cpu() 再转 numpy
-                # （修复 MPS/CUDA tensor 无法直接转 numpy 的 device mismatch 报错）
-                vecs = outputs.last_hidden_state[:, 0].cpu().numpy()
-                # L2 归一化
-                norms = (vecs ** 2).sum(axis=1, keepdims=True) ** 0.5
-                vecs = vecs / norms
-                return [v.tolist() for v in vecs]
-
-        return await loop.run_in_executor(None, _encode)
-
-    @classmethod
-    async def _api_embed(cls, texts: list[str]) -> list[list[float]]:
-        import httpx
-        settings = get_settings()
-        async with httpx.AsyncClient(timeout=30.0, trust_env=False) as client:
-            resp = await client.post(
-                f"{settings.embedding_base_url}/embeddings",
-                headers={"Authorization": f"Bearer {settings.embedding_api_key}"},
-                json={"model": settings.embedding_model, "input": texts},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-        return [d["embedding"] for d in data["data"]]
-
-
-def cosine_sim(a: list[float], b: list[float]) -> float:
-    if not a or not b:
-        return 0.0
-    return sum(x * y for x, y in zip(a, b))
-
-
 async def _ensure_table():
+    """Ensure the legacy storage adapter uses the canonical schema metadata.
+
+    The old inline DDL created only a subset of the v2 ``knowledge_chunks``
+    columns, which made a fresh local database differ from migrated
+    production databases.  ``create_all(checkfirst=True)`` is safe for both
+    SQLite demo startup and an already-migrated PostgreSQL schema; Alembic
+    remains responsible for adding columns to existing deployments.
+    """
+
     async with engine.begin() as conn:
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS knowledge_chunks (
-                id TEXT PRIMARY KEY,
-                content TEXT NOT NULL,
-                vector TEXT NOT NULL,
-                source_name TEXT,
-                doc_id TEXT,
-                chunk_index INT,
-                tenant_id TEXT DEFAULT 'tenant_default',
-                updated_at INT
+        await conn.run_sync(
+            lambda sync_conn: METADATA.create_all(
+                sync_conn, tables=[knowledge_chunks], checkfirst=True
             )
-        """))
+        )
 
 
 # ═══════════════ 向量后端注册表（可插拔）═══════════════
@@ -352,19 +239,26 @@ def _milvus_search(query_vec: list[float], tenant_id: str, top_k: int) -> list[d
     return out
 
 
+def _truncate_utf8(s: str, max_bytes: int) -> str:
+    """按 UTF-8 字节数截断（Milvus VARCHAR 上限按字节计，中文 3 字节/字）"""
+    return s.encode("utf-8")[:max_bytes].decode("utf-8", errors="ignore")
+
+
 def _milvus_add(chunks: list[dict], vectors: list[list[float]], tenant_id: str) -> None:
     """Milvus 写入"""
     client = _get_milvus_client()
     data = []
     for c, vec in zip(chunks, vectors):
         data.append({
-            "id": f"{c['doc_id']}_{c['chunk_index']}",
+            # id 用 md5（32 字符）避免 doc_id 拼接超 VARCHAR(64) 上限（曾报 length exceeds max length）
+            "id": hashlib.md5(f"{c['doc_id']}_{c['chunk_index']}".encode()).hexdigest(),
             "embedding": vec,                       # 标准 schema 字段名（BGE-M3 dense）
             # 稀疏向量：由 BM25 词频构造（Milvus 2.4 要求非空；顺带启用 hybrid 稀疏路）
             "sparse_embedding": _build_sparse_vec(c["content"]),
             "content": c["content"],
-            "source_name": c.get("source_name", ""),
-            "document_id": c.get("doc_id", ""),     # 标准 schema 字段名
+            # 字符串字段按 UTF-8 字节截断（VARCHAR 上限按字节计，超长文档名/路径防御）
+            "source_name": _truncate_utf8(str(c.get("source_name", "")), 256),
+            "document_id": _truncate_utf8(str(c.get("doc_id", "")), 64),     # 标准 schema 字段名
             "chunk_index": c.get("chunk_index", 0),
             "course_id": "buildmate",               # 标识来源（隔离 历史数据）
             "tenant_id": tenant_id,
@@ -376,82 +270,6 @@ def _milvus_add(chunks: list[dict], vectors: list[list[float]], tenant_id: str) 
         client.insert(collection_name="knowledge_domain", data=data)
 
 
-def _build_sparse_vec(text: str) -> dict:
-    """用 BM25 分词构造 Milvus 稀疏向量 {token_hash: 词频}（IDF 由 Milvus 稀疏索引处理）"""
-    tokens = _tokenize(text)
-    freq: dict[int, float] = {}
-    for t in tokens:
-        h = int(hashlib.md5(t.encode()).hexdigest()[:8], 16)
-        freq[h] = freq.get(h, 0) + 1.0
-    if not freq:
-        freq = {0: 0.0}   # Milvus 2.4 要求非空稀疏向量
-    return freq
-
-# ── BM25 稀疏检索────────────────
-# 与稠密向量互补：BM25 看重字面词命中，IDF 自动压低"规范/施工"这类高频泛词，
-# 突出"女儿墙/螺纹钢/GB50010"等低频专名 → 不会再把无关 chunk 抬过阈值。
-_STOP_WORDS = frozenset([
-    "的", "了", "和", "与", "及", "是", "吗", "嘛",
-    "怎么", "怎样", "什么", "多少", "请问",
-    "可以", "能", "不能", "有", "没有",
-    "一下", "？", "！", "?", "!", "、", "，", ",",
-])
-
-_K1 = 1.5   # BM25 词频饱和参数
-_B = 0.75   # BM25 文档长度归一化参数
-
-
-def _tokenize(text: str) -> list[str]:
-    """分词：英文/数字 token + 中文 2/3-gram（3-gram 代表更具体的实体词）"""
-    text = text.lower()
-    tokens = re.findall(r"[a-z0-9]+", text)
-    cjk = "".join(re.findall(r"[\u4e00-\u9fa5]", text))
-    if cjk:
-        # 2-gram 与 3-gram 都保留；3-gram 更贴近实体词（女儿墙/螺纹钢/装配式）
-        tokens.extend(cjk[i:i + 2] for i in range(len(cjk) - 1))
-        tokens.extend(cjk[i:i + 3] for i in range(len(cjk) - 2))
-    return [t for t in tokens if t not in _STOP_WORDS and len(t) >= 2]
-
-
-def _bm25_score(query_tokens: list[str], doc: str, df: dict, doc_count: int,
-                avg_dl: float) -> float:
-    """单文档 BM25 分数（3-gram 权重 x2，突出实体词；2-gram 泛词权重 x1）"""
-    doc_l = doc.lower()
-    dl = max(1, len(_tokenize(doc)))
-    score = 0.0
-    for tok in set(query_tokens):
-        if tok not in df:
-            continue
-        tf = doc_l.count(tok)
-        if tf == 0:
-            continue
-        idf = math.log(1 + (doc_count - df[tok] + 0.5) / (df[tok] + 0.5))
-        tf_norm = tf * (_K1 + 1) / (tf + _K1 * (1 - _B + _B * dl / avg_dl))
-        weight = 2.0 if len(tok) >= 3 else 1.0   # 3-gram 实体词加权
-        score += weight * idf * tf_norm
-    return score
-
-
-def _build_bm25_index(docs: list[str]) -> dict:
-    """预计算 BM25 所需统计：df（词→文档数）、avg_dl、doc_count"""
-    df: dict[str, int] = {}
-    total_len = 0
-    for doc in docs:
-        seen = set(_tokenize(doc))
-        for tok in seen:
-            df[tok] = df.get(tok, 0) + 1
-        total_len += max(1, len(_tokenize(doc)))
-    return {"df": df, "avg_dl": total_len / max(1, len(docs)), "doc_count": len(docs)}
-
-
-def _sparse_bm25(query: str, contents: list[str]) -> list[float]:
-    """对一批文档计算 BM25 分数（相对分，未归一化）"""
-    q_tokens = _tokenize(query)
-    if not q_tokens:
-        return [0.0] * len(contents)
-    idx = _build_bm25_index(contents)
-    return [_bm25_score(q_tokens, doc, idx["df"], idx["doc_count"], idx["avg_dl"])
-            for doc in contents]
 # ── M4-lite：租户 chunk 行缓存（写路径失效 + TTL 兜底）──────────────────────
 # 旧实现每次检索全量 SELECT + 逐行 json.loads；数据量大时延迟线性恶化。
 # 注意：单进程有效；多 worker/多实例部署应换共享缓存（Redis）或直接走 Milvus/pgvector。
@@ -560,3 +378,24 @@ async def clear_knowledge(tenant_id: str = "tenant_default"):
         except Exception as e:
             logger.warning("vector_store.backend_clear_failed",
                            backend=backend.name, error=str(e)[:150])
+
+
+# Compatibility facade: storage/backends stay available from the historical
+# module, while every vector operation now resolves to the canonical RAG
+# implementation.  This assignment is intentionally at module end so the
+# legacy definitions above cannot shadow the new implementation at runtime.
+from backend.rag.vectorization import (  # noqa: E402
+    DIM as _RAG_DIM,
+    TextVectorizer as _RAGTextVectorizer,
+    _build_sparse_vec as _rag_build_sparse_vec,
+    _sparse_bm25 as _rag_sparse_bm25,
+    _tokenize as _rag_tokenize,
+    cosine_sim as _rag_cosine_sim,
+)
+
+DIM = _RAG_DIM
+TextVectorizer = _RAGTextVectorizer
+cosine_sim = _rag_cosine_sim
+_build_sparse_vec = _rag_build_sparse_vec
+_sparse_bm25 = _rag_sparse_bm25
+_tokenize = _rag_tokenize

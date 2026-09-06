@@ -1,0 +1,131 @@
+schema_version: buildmate.wall-pipeline-config/1.0
+tenant_id: tenant-demo
+project_id: project-demo
+
+source:
+  type: dwg
+  files:
+    - path: ../data/input/architectural-plan.dwg
+      role: plan
+    - path: ../data/input/structural-supplement.dwg
+      role: structural_supplement
+  converter:
+    executable: C:/Program Files/ODA/ODAFileConverter/ODAFileConverter.exe
+    output_version: ACAD2018
+    timeout_seconds: 300
+
+coordinate:
+  origin: revit_project_base_point
+  source_unit: auto
+  source_origin: [0.0, 0.0]
+  rotation_deg: auto
+  translation_m: [0.0, 0.0]
+
+# Project-specific layer conventions belong here, never in the geometry code.
+wall:
+  include_layers: ["(?i)wall", "墙"]
+  exclude_layers: ["(?i)door|window|hatch|annotation"]
+  min_thickness_m: 0.075
+  max_thickness_m: 0.60
+  thickness_tolerance_m: 0.005
+  min_length_m: 0.30
+  break_gap_m: 0.06
+  junction_tolerance_m: 0.15
+  specification_association_distance_m: 0.80
+  allow_single_line_evidence: false
+
+# Structural column profiles are geometric evidence.  OCR marks classify a
+# profile and can link it to a legend/detail size; they never move its
+# coordinates.  Keep the association radius explicit for rotated PDFs.
+column:
+  include_layers: ["(?i)S-COLU|S-COLS|COLUMN|COLU"]
+  profile_layers: ["(?i)S-COLU-HATC|S-COLS-HATC|COLU-HATC"]
+  label_layers: ["^OCR$|(?i)S-COLU.*TEXT$|S-COLS.*TEXT$"]
+  label_pattern: "\\b(?:GBZ|YBZ)\\s*-?\\s*\\d+[A-Z]?\\b"
+  profile_match_distance_m: 5.0
+  specification_association_distance_m: 1.5
+
+# Optional semantic annotations for openings.  Labels classify a marker only;
+# the closed vector boundary supplies its coordinates and dimensions.  Keep
+# these layer patterns project-specific rather than hardcoding a drawing name
+# in the geometry engine.
+opening:
+  label_layers: ["(?i)wall.*opening.*text|S-WALL-HO-TEXT$"]
+  boundary_layers: ["(?i)wall.*opening.*text|S-WALL-HO-TEXT$"]
+  exclude_layers: ["(?i)dims|annotation"]
+  label_pattern: "\\b(?:JD|HOLE|OPENING)\\s*-?\\s*[0-9A-Z]+\\b"
+  association_distance_m: 2.0
+  min_width_m: 0.05
+  max_width_m: 20.0
+  min_depth_m: 0.05
+  max_depth_m: 20.0
+
+# Structural coupling beams are a separate entity from walls.  Linework is
+# allowed to determine geometry; LL labels only classify the resulting beam.
+beam:
+  line_layers: ["(?i)S-WALL-BEAM$|S-BEAM$|LL-BEAM$"]
+  label_layers: ["^OCR$|(?i)S-WALL-BEAM.*TEXT$|S-BEAM.*TEXT$"]
+  exclude_layers: ["(?i)anno|dim|symbol|hatch|title"]
+  label_pattern: "\\b(?:LL|KL)\\s*-?\\s*\\d+[A-Z]?\\b"
+  association_distance_m: 2.0
+  label_association_distance_m: 8.0
+  min_length_m: 0.50
+  min_width_m: 0.075
+  max_width_m: 0.80
+  depth_m: 0.50
+  # LL/KL mark and top/base elevation columns may be separated across an A0
+  # schedule.  Keep this bound configurable for projects with wider tables;
+  # the aligned-axis tolerance still prevents unrelated values from binding.
+  elevation_association_distance_m: 25.0
+  elevation_alignment_tolerance_m: 0.20
+
+grid:
+  axes: []
+
+level:
+  id: level-b1
+  name: B1
+  # 用户输入本层底~顶标高（单位 m）。例如 -6.4~0 会自动识别为 B1，
+  # 并将墙柱高度确定为 6.4m；若填写 B2/B3 等非首层地下室，请同时填写 floor_code。
+  elevation_range: "-6.4~0"
+  elevation_m: -6.4
+  top_elevation_m: 0.0
+  wall_height_m: 6.4
+
+review_gate:
+  min_confidence: 0.70
+  max_dangling_endpoint_ratio: 1.0
+
+# Chinese national BIM standards profile.  These references are recorded on
+# source_manifest.json and wall_model.json and checked by a deterministic gate.
+# GB/T is a recommended national-standard conformance profile, not a legal
+# certification; project-specific design codes still require human review.
+modeling_standard:
+  profile: cn_gb_bim_delivery_v1
+  references:
+    - GB/T 51212-2016
+    - GB/T 51269-2017
+    - GB/T 51301-2018
+    - GB/T 51235-2017
+  units: m
+  coordinate_frame: project_north
+  classification_system: GB/T 51269-2017
+  application_standard: GB/T 51212-2016
+  delivery_standard: GB/T 51301-2018
+  construction_standard: GB/T 51235-2017
+  # Revit properties and operator-facing dimensions are always millimetres.
+  # WallModel geometry remains canonical metres internally.
+  delivery_units: mm
+  require_source_refs: true
+  require_classification_code: true
+  require_instance_parameters: true
+  require_level: true
+  require_material: false
+  require_quantities: true
+
+revit:
+  target_model_path: ../data/revit/project-model.rvt
+  floor_code: B1
+  wall_type_name: null
+
+output_dir: ../data/runtime/wall_pipeline

@@ -1,72 +1,76 @@
-"""灌入知识库文档（RAG 用）— 对齐行业范式-03 智能分块（MarkdownHeaderTextSplitter + MarkdownTextSplitter 两阶段）
-扫描目录：
-  data/knowledge      模拟/示例知识库
-  data/knowledge_real 公开数据网抓取的真实知识库（法规/规范）
-用法：python scripts/seed_knowledge.py
+"""Ingest bundled Markdown documents through the canonical RAG v2 pipeline.
+
+Scans ``data/knowledge`` and ``data/knowledge_real``. Re-running is safe:
+document versions are content-addressed and existing versions are reused.
 """
+
+from __future__ import annotations
+
 import asyncio
-import sys, os
+import sys
 from pathlib import Path
 
-if sys.platform == 'win32':
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
-from langchain_core.documents import Document
-from langchain_text_splitters import MarkdownHeaderTextSplitter, MarkdownTextSplitter
+_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_ROOT))
 
-from backend.core.knowledge_base import add_chunks, clear_knowledge
 from backend.config import get_settings
-
-_MD_HEADER_SPLITTER = MarkdownHeaderTextSplitter(
-    headers_to_split_on=[("#", "H1"), ("##", "H2"), ("###", "H3"), ("####", "H4")],
-    strip_headers=False,  # 保留标题行，chunk 自带上下文
-)
+from backend.domain.contracts import RequestContext
+from backend.rag.contracts import KnowledgeDocumentCreate, KnowledgeScope
+from backend.rag.service import RAGService
 
 
-def split_markdown_documents(text: str, source: str, chunk_size: int = 1200,
-                             chunk_overlap: int = 100) -> list[dict]:
-    """对标行业范式-03：按标题语义切分 + 超长块二次切分"""
-    splitter = MarkdownTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    header_chunks = _MD_HEADER_SPLITTER.split_text(text)
-    for c in header_chunks:
-        c.metadata["source"] = source
-    final_chunks = splitter.split_documents(header_chunks)
+async def seed_markdown_directories(
+    directories: list[Path],
+    *,
+    tenant_id: str,
+) -> tuple[int, int]:
+    """Ingest Markdown files and return ``(document_count, new_chunk_count)``."""
 
-    out = []
-    for i, chunk in enumerate(final_chunks):
-        filename = Path(source).stem if source else "未知文件"
-        parts = [chunk.metadata.get(k, "") for k in ("H1", "H2", "H3", "H4")]
-        parts = [p for p in parts if p]
-        source_name = f"{filename} > {' > '.join(parts)}" if parts else filename
-        out.append({
-            "content": chunk.page_content,
-            "source_name": source_name,
-            "doc_id": filename,
-            "chunk_index": i,
-        })
-    return out
-
-
-async def main():
-    settings = get_settings()
-    await clear_knowledge(settings.default_tenant_id)
-    dirs = [
-        Path(__file__).parent.parent / "data" / "knowledge",
-        Path(__file__).parent.parent / "data" / "knowledge_real",
-    ]
-    total = 0
-    for kb_dir in dirs:
-        if not kb_dir.exists():
+    context = RequestContext(
+        tenant_id=tenant_id,
+        project_id=None,
+        user_id="system:knowledge-seed",
+        role="system",
+        trace_id="knowledge-seed",
+        correlation_id="knowledge-seed",
+    )
+    service = RAGService()
+    document_count = 0
+    new_chunk_count = 0
+    for directory in directories:
+        if not directory.exists():
             continue
-        for fp in sorted(kb_dir.glob("*.md")):
-            text = fp.read_text(encoding="utf-8")
-            chunks = split_markdown_documents(text, fp.name)
-            await add_chunks(chunks, tenant_id=settings.default_tenant_id)
-            total += len(chunks)
-            print(f"  {fp.name}: {len(chunks)} chunks")
-    print(f"✅ 知识库灌入完成，共 {total} 个 chunk")
+        for path in sorted(directory.glob("*.md")):
+            result, created = await service.ingest(
+                context,
+                KnowledgeDocumentCreate(
+                    scope=KnowledgeScope.TENANT,
+                    source_type="markdown",
+                    source_uri=path.resolve().as_uri(),
+                    title=path.stem,
+                    content=path.read_text(encoding="utf-8"),
+                    metadata={"filename": path.name, "seed": True},
+                ),
+            )
+            document_count += 1
+            chunk_count = int(result.get("chunk_count") or 0) if created else 0
+            new_chunk_count += chunk_count
+            state = f"{chunk_count} chunks" if created else "unchanged"
+            print(f"  {path.name}: {state}")
+    return document_count, new_chunk_count
+
+
+async def main() -> None:
+    settings = get_settings()
+    documents, chunks = await seed_markdown_directories(
+        [_ROOT / "data" / "knowledge", _ROOT / "data" / "knowledge_real"],
+        tenant_id=settings.default_tenant_id,
+    )
+    print(f"Knowledge seed complete: {documents} documents, {chunks} new chunks")
 
 
 if __name__ == "__main__":

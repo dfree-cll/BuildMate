@@ -1,0 +1,1579 @@
+{
+  "$defs": {
+    "ApprovalRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "decided_at": {
+          "format": "date-time",
+          "title": "Decided At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "actor_id",
+        "reason"
+      ],
+      "title": "ApprovalRecord",
+      "type": "object"
+    },
+    "BeamRecord": {
+      "additionalProperties": false,
+      "description": "A source-traceable coupling-beam centerline in metres.",
+      "properties": {
+        "beam_id": {
+          "title": "Beam Id",
+          "type": "string"
+        },
+        "start_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Start M",
+          "type": "array"
+        },
+        "end_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "End M",
+          "type": "array"
+        },
+        "width_m": {
+          "exclusiveMinimum": 0,
+          "title": "Width M",
+          "type": "number"
+        },
+        "depth_m": {
+          "exclusiveMinimum": 0,
+          "title": "Depth M",
+          "type": "number"
+        },
+        "level_id": {
+          "title": "Level Id",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "type_mark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type Mark"
+        },
+        "construction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConstructionInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quantities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantityTakeoff"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "top_elevation_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Elevation M"
+        },
+        "base_elevation_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Elevation M"
+        },
+        "elevation_status": {
+          "default": "unresolved",
+          "enum": [
+            "resolved",
+            "level_default",
+            "unresolved",
+            "conflict"
+          ],
+          "title": "Elevation Status",
+          "type": "string"
+        },
+        "elevation_source": {
+          "default": "none",
+          "enum": [
+            "drawing",
+            "schedule",
+            "detail",
+            "annotation",
+            "level_default",
+            "none"
+          ],
+          "title": "Elevation Source",
+          "type": "string"
+        },
+        "elevation_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Elevation Text"
+        },
+        "elevation_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "title": "Elevation Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "beam_id",
+        "start_m",
+        "end_m",
+        "width_m",
+        "depth_m",
+        "level_id",
+        "source_refs",
+        "confidence"
+      ],
+      "title": "BeamRecord",
+      "type": "object"
+    },
+    "ColumnRecord": {
+      "additionalProperties": false,
+      "description": "A source-traceable column profile in the project-local metre frame.",
+      "properties": {
+        "column_id": {
+          "title": "Column Id",
+          "type": "string"
+        },
+        "center_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Center M",
+          "type": "array"
+        },
+        "profile_m": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "minItems": 3,
+          "title": "Profile M",
+          "type": "array"
+        },
+        "width_m": {
+          "exclusiveMinimum": 0,
+          "title": "Width M",
+          "type": "number"
+        },
+        "depth_m": {
+          "exclusiveMinimum": 0,
+          "title": "Depth M",
+          "type": "number"
+        },
+        "height_m": {
+          "exclusiveMinimum": 0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "level_id": {
+          "title": "Level Id",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "profile_kind": {
+          "default": "rectangular",
+          "enum": [
+            "rectangular",
+            "irregular"
+          ],
+          "title": "Profile Kind",
+          "type": "string"
+        },
+        "type_mark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type Mark"
+        },
+        "construction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConstructionInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quantities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantityTakeoff"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "column_id",
+        "center_m",
+        "profile_m",
+        "width_m",
+        "depth_m",
+        "height_m",
+        "level_id",
+        "source_refs",
+        "confidence"
+      ],
+      "title": "ColumnRecord",
+      "type": "object"
+    },
+    "ConstructionInfo": {
+      "additionalProperties": false,
+      "description": "Typed construction metadata projected onto each model element.",
+      "properties": {
+        "category": {
+          "enum": [
+            "Wall",
+            "Column",
+            "Beam"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "discipline": {
+          "const": "Structural",
+          "default": "Structural",
+          "title": "Discipline",
+          "type": "string"
+        },
+        "structural_role": {
+          "default": "unresolved",
+          "enum": [
+            "shear_wall",
+            "architectural_wall",
+            "unresolved"
+          ],
+          "title": "Structural Role",
+          "type": "string"
+        },
+        "type_name": {
+          "title": "Type Name",
+          "type": "string"
+        },
+        "type_mark": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type Mark"
+        },
+        "family_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Name"
+        },
+        "family_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Type"
+        },
+        "representation": {
+          "anyOf": [
+            {
+              "enum": [
+                "system_family",
+                "loadable_family",
+                "profile_directshape"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Representation"
+        },
+        "specification_status": {
+          "default": "unresolved",
+          "enum": [
+            "resolved_from_legend",
+            "resolved_from_schedule",
+            "resolved_from_detail",
+            "resolved_from_annotation",
+            "unresolved",
+            "conflict"
+          ],
+          "title": "Specification Status",
+          "type": "string"
+        },
+        "specification_source": {
+          "default": "none",
+          "enum": [
+            "legend",
+            "schedule",
+            "detail",
+            "annotation",
+            "none"
+          ],
+          "title": "Specification Source",
+          "type": "string"
+        },
+        "specification_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Specification Text"
+        },
+        "specification_mm": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Specification Mm",
+          "type": "object"
+        },
+        "specification_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "title": "Specification Refs",
+          "type": "array"
+        },
+        "classification_code": {
+          "title": "Classification Code",
+          "type": "string"
+        },
+        "classification_system": {
+          "const": "GB/T 51269-2017",
+          "default": "GB/T 51269-2017",
+          "title": "Classification System",
+          "type": "string"
+        },
+        "material_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Material Name"
+        },
+        "material_status": {
+          "default": "unspecified",
+          "enum": [
+            "provided",
+            "unspecified"
+          ],
+          "title": "Material Status",
+          "type": "string"
+        },
+        "quantity_basis": {
+          "const": "deterministic_geometry",
+          "default": "deterministic_geometry",
+          "title": "Quantity Basis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "category",
+        "type_name",
+        "classification_code"
+      ],
+      "title": "ConstructionInfo",
+      "type": "object"
+    },
+    "EvidenceSourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "source_file_id": {
+          "title": "Source File Id",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        },
+        "layer": {
+          "default": "",
+          "title": "Layer",
+          "type": "string"
+        },
+        "frame_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Id"
+        }
+      },
+      "required": [
+        "source_file_id",
+        "entity_id",
+        "locator"
+      ],
+      "title": "EvidenceSourceRef",
+      "type": "object"
+    },
+    "GridAxis": {
+      "additionalProperties": false,
+      "properties": {
+        "axis_id": {
+          "title": "Axis Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "start_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Start M",
+          "type": "array"
+        },
+        "end_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "End M",
+          "type": "array"
+        },
+        "source_file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source File Id"
+        },
+        "frame_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Id"
+        }
+      },
+      "required": [
+        "axis_id",
+        "label",
+        "start_m",
+        "end_m"
+      ],
+      "title": "GridAxis",
+      "type": "object"
+    },
+    "LevelConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "elevation_m": {
+          "default": 0.0,
+          "title": "Elevation M",
+          "type": "number"
+        },
+        "top_elevation_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Elevation M"
+        },
+        "elevation_range": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Elevation Range"
+        },
+        "elevation_source": {
+          "default": "input",
+          "enum": [
+            "input",
+            "drawing",
+            "revit",
+            "unresolved"
+          ],
+          "title": "Elevation Source",
+          "type": "string"
+        },
+        "wall_height_m": {
+          "default": 3.0,
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Wall Height M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "LevelConfig",
+      "type": "object"
+    },
+    "ModelingStandardConfig": {
+      "additionalProperties": false,
+      "description": "Executable project profile for Chinese national BIM standards.\n\nGB/T documents describe a common information and delivery framework; they\ndo not provide a drop-in wall-recognition algorithm.  This profile keeps\nthe normative references explicit and turns the parts that can be checked\ndeterministically (units, coordinates, classification, provenance and\nconstruction metadata) into pipeline gates.",
+      "properties": {
+        "profile": {
+          "const": "cn_gb_bim_delivery_v1",
+          "default": "cn_gb_bim_delivery_v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 3,
+          "title": "References",
+          "type": "array"
+        },
+        "units": {
+          "const": "m",
+          "default": "m",
+          "title": "Units",
+          "type": "string"
+        },
+        "delivery_units": {
+          "const": "mm",
+          "default": "mm",
+          "title": "Delivery Units",
+          "type": "string"
+        },
+        "coordinate_frame": {
+          "default": "project_north",
+          "enum": [
+            "project_north",
+            "true_north"
+          ],
+          "title": "Coordinate Frame",
+          "type": "string"
+        },
+        "classification_system": {
+          "const": "GB/T 51269-2017",
+          "default": "GB/T 51269-2017",
+          "title": "Classification System",
+          "type": "string"
+        },
+        "application_standard": {
+          "const": "GB/T 51212-2016",
+          "default": "GB/T 51212-2016",
+          "title": "Application Standard",
+          "type": "string"
+        },
+        "delivery_standard": {
+          "const": "GB/T 51301-2018",
+          "default": "GB/T 51301-2018",
+          "title": "Delivery Standard",
+          "type": "string"
+        },
+        "construction_standard": {
+          "anyOf": [
+            {
+              "const": "GB/T 51235-2017",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "GB/T 51235-2017",
+          "title": "Construction Standard"
+        },
+        "naming_prefix": {
+          "default": "BM",
+          "maxLength": 16,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Naming Prefix",
+          "type": "string"
+        },
+        "wall_type_prefix": {
+          "default": "BM-WALL",
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Wall Type Prefix",
+          "type": "string"
+        },
+        "column_type_prefix": {
+          "default": "BM-COLUMN",
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Column Type Prefix",
+          "type": "string"
+        },
+        "require_source_refs": {
+          "default": true,
+          "title": "Require Source Refs",
+          "type": "boolean"
+        },
+        "require_classification_code": {
+          "default": true,
+          "title": "Require Classification Code",
+          "type": "boolean"
+        },
+        "require_instance_parameters": {
+          "default": true,
+          "title": "Require Instance Parameters",
+          "type": "boolean"
+        },
+        "require_level": {
+          "default": true,
+          "title": "Require Level",
+          "type": "boolean"
+        },
+        "require_material": {
+          "default": false,
+          "title": "Require Material",
+          "type": "boolean"
+        },
+        "require_quantities": {
+          "default": true,
+          "title": "Require Quantities",
+          "type": "boolean"
+        }
+      },
+      "title": "ModelingStandardConfig",
+      "type": "object"
+    },
+    "OpeningRecord": {
+      "additionalProperties": false,
+      "description": "A source-traceable opening marker associated with candidate wall hosts.",
+      "properties": {
+        "opening_id": {
+          "title": "Opening Id",
+          "type": "string"
+        },
+        "mark": {
+          "title": "Mark",
+          "type": "string"
+        },
+        "type_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type Name"
+        },
+        "semantic_role": {
+          "const": "shear_wall_opening",
+          "default": "shear_wall_opening",
+          "title": "Semantic Role",
+          "type": "string"
+        },
+        "center_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Center M",
+          "type": "array"
+        },
+        "boundary_m": {
+          "items": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Boundary M",
+          "type": "array"
+        },
+        "width_m": {
+          "minimum": 0,
+          "title": "Width M",
+          "type": "number"
+        },
+        "depth_m": {
+          "minimum": 0,
+          "title": "Depth M",
+          "type": "number"
+        },
+        "host_wall_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Host Wall Ids",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "status": {
+          "enum": [
+            "matched",
+            "review_required"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "specification_mm": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Specification Mm",
+          "type": "object"
+        },
+        "specification_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "title": "Specification Refs",
+          "type": "array"
+        },
+        "cut_status": {
+          "default": "review_required",
+          "enum": [
+            "review_required",
+            "ready"
+          ],
+          "title": "Cut Status",
+          "type": "string"
+        },
+        "elevation_source": {
+          "default": "unresolved",
+          "enum": [
+            "drawing",
+            "drawing_inferred_basement",
+            "input",
+            "unresolved"
+          ],
+          "title": "Elevation Source",
+          "type": "string"
+        },
+        "cut_start_m": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cut Start M"
+        },
+        "cut_end_m": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cut End M"
+        },
+        "base_elevation_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Elevation M"
+        },
+        "top_elevation_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Elevation M"
+        }
+      },
+      "required": [
+        "opening_id",
+        "mark",
+        "center_m",
+        "width_m",
+        "depth_m",
+        "source_refs",
+        "confidence",
+        "status"
+      ],
+      "title": "OpeningRecord",
+      "type": "object"
+    },
+    "QuantityTakeoff": {
+      "additionalProperties": false,
+      "properties": {
+        "length_m": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length M"
+        },
+        "footprint_area_m2": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Footprint Area M2"
+        },
+        "cross_section_area_m2": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cross Section Area M2"
+        },
+        "side_area_m2": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Side Area M2"
+        },
+        "gross_volume_m3": {
+          "minimum": 0,
+          "title": "Gross Volume M3",
+          "type": "number"
+        }
+      },
+      "required": [
+        "gross_volume_m3"
+      ],
+      "title": "QuantityTakeoff",
+      "type": "object"
+    },
+    "ReviewGate": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "checks": {
+          "additionalProperties": {
+            "type": "boolean"
+          },
+          "title": "Checks",
+          "type": "object"
+        },
+        "errors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "array"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "standard_violations": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Standard Violations",
+          "type": "array"
+        },
+        "diagnostics": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Diagnostics",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "checks",
+        "metrics"
+      ],
+      "title": "ReviewGate",
+      "type": "object"
+    },
+    "RevitConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "target_model_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Model Path"
+        },
+        "floor_code": {
+          "default": "",
+          "maxLength": 32,
+          "title": "Floor Code",
+          "type": "string"
+        },
+        "wall_type_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Type Name"
+        }
+      },
+      "title": "RevitConfig",
+      "type": "object"
+    },
+    "TopologyJunction": {
+      "additionalProperties": false,
+      "properties": {
+        "junction_id": {
+          "title": "Junction Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "L",
+            "T",
+            "X",
+            "Z",
+            "straight"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "point_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Point M",
+          "type": "array"
+        },
+        "wall_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Wall Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "junction_id",
+        "kind",
+        "point_m",
+        "wall_ids"
+      ],
+      "title": "TopologyJunction",
+      "type": "object"
+    },
+    "WallRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "wall_id": {
+          "title": "Wall Id",
+          "type": "string"
+        },
+        "start_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Start M",
+          "type": "array"
+        },
+        "end_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "End M",
+          "type": "array"
+        },
+        "thickness_m": {
+          "exclusiveMinimum": 0,
+          "title": "Thickness M",
+          "type": "number"
+        },
+        "height_m": {
+          "exclusiveMinimum": 0,
+          "title": "Height M",
+          "type": "number"
+        },
+        "level_id": {
+          "title": "Level Id",
+          "type": "string"
+        },
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "topology": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Topology",
+          "type": "array"
+        },
+        "construction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConstructionInfo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quantities": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/QuantityTakeoff"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "wall_id",
+        "start_m",
+        "end_m",
+        "thickness_m",
+        "height_m",
+        "level_id",
+        "evidence_ids",
+        "source_refs",
+        "confidence"
+      ],
+      "title": "WallRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "buildmate.wall-model/1.0",
+      "default": "buildmate.wall-model/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "artifact_type": {
+      "const": "wall_model",
+      "default": "wall_model",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "tenant_id": {
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "project_id": {
+      "title": "Project Id",
+      "type": "string"
+    },
+    "wall_evidence_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Wall Evidence Sha256",
+      "type": "string"
+    },
+    "units": {
+      "const": "m",
+      "default": "m",
+      "title": "Units",
+      "type": "string"
+    },
+    "coordinate_origin": {
+      "title": "Coordinate Origin",
+      "type": "string"
+    },
+    "modeling_standard": {
+      "$ref": "#/$defs/ModelingStandardConfig"
+    },
+    "transform_chain": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Transform Chain",
+      "type": "array"
+    },
+    "source_bounds_m": {
+      "anyOf": [
+        {
+          "maxItems": 4,
+          "minItems": 4,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Bounds M"
+    },
+    "level": {
+      "$ref": "#/$defs/LevelConfig"
+    },
+    "grid": {
+      "items": {
+        "$ref": "#/$defs/GridAxis"
+      },
+      "title": "Grid",
+      "type": "array"
+    },
+    "walls": {
+      "items": {
+        "$ref": "#/$defs/WallRecord"
+      },
+      "title": "Walls",
+      "type": "array"
+    },
+    "columns": {
+      "items": {
+        "$ref": "#/$defs/ColumnRecord"
+      },
+      "title": "Columns",
+      "type": "array"
+    },
+    "beams": {
+      "items": {
+        "$ref": "#/$defs/BeamRecord"
+      },
+      "title": "Beams",
+      "type": "array"
+    },
+    "openings": {
+      "items": {
+        "$ref": "#/$defs/OpeningRecord"
+      },
+      "title": "Openings",
+      "type": "array"
+    },
+    "junctions": {
+      "items": {
+        "$ref": "#/$defs/TopologyJunction"
+      },
+      "title": "Junctions",
+      "type": "array"
+    },
+    "gate": {
+      "$ref": "#/$defs/ReviewGate"
+    },
+    "review_status": {
+      "default": "pending",
+      "enum": [
+        "pending",
+        "approved",
+        "rejected"
+      ],
+      "title": "Review Status",
+      "type": "string"
+    },
+    "approval": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ApprovalRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "revit": {
+      "$ref": "#/$defs/RevitConfig"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "project_id",
+    "wall_evidence_sha256",
+    "coordinate_origin",
+    "level",
+    "walls",
+    "gate"
+  ],
+  "title": "WallModel",
+  "type": "object"
+}

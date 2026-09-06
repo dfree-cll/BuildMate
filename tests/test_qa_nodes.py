@@ -5,7 +5,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 from langchain_core.messages import AIMessage
 
-from backend.agents.qa.nodes import retrieve_node, generate_node, classify_query_node
+from backend.agents.qa.nodes import (
+    classify_query_node,
+    enqueue_pending_node,
+    generate_node,
+    retrieve_node,
+)
 
 
 class _MockLLM:
@@ -69,3 +74,28 @@ async def test_generate_direct_low_confidence(mock_llm):
         "messages": [], "user_id": "u", "session_id": "s",
     })
     assert st["answer_mode"] in ("llm_direct", "rag_hybrid")
+
+
+async def test_pending_queue_insert_is_sqlite_safe_and_idempotent():
+    """A retried low-confidence answer creates one durable knowledge gap."""
+    from sqlalchemy import text
+    from backend.db.session import engine
+
+    state = {
+        "original_query": "qa-pending-idempotency-unique",
+        "confidence": 0.1,
+        "answer_mode": "llm_direct",
+        "tenant_id": "tenant_qa_pending",
+        "user_id": "qa-user",
+    }
+    await enqueue_pending_node(state)
+    await enqueue_pending_node(state)
+    async with engine.connect() as conn:
+        count = (await conn.execute(text(
+            "SELECT COUNT(*) FROM knowledge_pending_queue "
+            "WHERE tenant_id=:tenant_id AND question=:question"
+        ), {
+            "tenant_id": state["tenant_id"],
+            "question": state["original_query"],
+        })).scalar_one()
+    assert count == 1

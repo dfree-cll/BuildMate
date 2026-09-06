@@ -1,0 +1,149 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "buildmate.audit-report/1.0",
+      "default": "buildmate.audit-report/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "artifact_type": {
+      "const": "audit_report",
+      "default": "audit_report",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "tenant_id": {
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "project_id": {
+      "title": "Project Id",
+      "type": "string"
+    },
+    "wall_model_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Wall Model Sha256",
+      "type": "string"
+    },
+    "revit_result_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Revit Result Sha256",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "blocked",
+        "pass",
+        "fail"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "independent_sources": {
+      "title": "Independent Sources",
+      "type": "boolean"
+    },
+    "source_render_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Render Path"
+    },
+    "source_render_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Render Sha256"
+    },
+    "revit_render_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revit Render Path"
+    },
+    "revit_render_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Revit Render Sha256"
+    },
+    "overlay_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Overlay Path"
+    },
+    "metrics": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "number"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "string"
+          }
+        ]
+      },
+      "title": "Metrics",
+      "type": "object"
+    },
+    "errors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "project_id",
+    "wall_model_sha256",
+    "revit_result_sha256",
+    "status",
+    "independent_sources"
+  ],
+  "title": "AuditReport",
+  "type": "object"
+}

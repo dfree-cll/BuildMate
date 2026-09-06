@@ -19,7 +19,9 @@ from backend.db.schema import METADATA
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers=False：否则 fileConfig 会把已创建的应用/uvicorn logger
+    # 全部禁用——应用启动路径下跑迁移后，所有请求日志静默消失
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # 连接串注入：仅当调用方未显式提供（或仍是 ini 占位符）时才取自 backend 配置。
 # ★ 此前无条件覆盖，导致程序化调用显式指定的目标库被悄悄替换成 .env 里的库——

@@ -33,3 +33,21 @@ async def test_check_stage_advances():
 async def test_stage_order_complete():
     """阶段顺序完整：quote→tech→delivery→sign→done"""
     assert [s.value for s in STAGE_ORDER] == ["quote", "tech", "delivery", "sign", "done"]
+
+
+async def test_check_stage_uses_validated_ready_boolean(monkeypatch):
+    from langchain_core.messages import AIMessage
+    import backend.agents.negotiation.nodes as nodes
+
+    class _TransitionLLM:
+        async def ainvoke(self, _messages):
+            return AIMessage(content='{"ready": true, "reason": "条件已满足"}')
+
+    monkeypatch.setattr(nodes, "get_llm", lambda *args, **kwargs: _TransitionLLM())
+    result = await nodes.check_stage_node({
+        "stage": "quote", "stage_index": 0,
+        "context": {"rounds_in_stage": 2},
+        "quotes": [],
+        "messages": [],
+    })
+    assert result["stage"] == "tech"

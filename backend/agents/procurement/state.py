@@ -7,7 +7,10 @@ from langgraph.graph.message import add_messages
 from langchain_core.messages import BaseMessage
 
 
-class ProcurementState(TypedDict):
+from backend.application.agent_memory import MemoryState
+
+
+class ProcurementState(MemoryState):
     messages: Annotated[list[BaseMessage], add_messages]
     user_id: str
     tenant_id: str
@@ -17,13 +20,14 @@ class ProcurementState(TypedDict):
     quantity: int
     unit_price: float
     total_amount: float
+    items: Optional[list[dict]]          # 多品类明细 [{material_name, quantity, unit_price, spec?, supplier?}]
     # 双轨审核结果
-    rule_result: Optional[dict]          # 规则引擎结果
+    rule_result: Optional[dict]          # 规则引擎结果（含 per_item）
     llm_result: Optional[dict]           # LLM 审查结果
     ai_conclusion: Optional[dict]        # 合并结论
     ai_verdict: str                      # pass / review / reject
     # HitL
-    teacher_decision: Optional[dict]     # interrupt 返回值
+    reviewer_decision: Optional[dict]    # interrupt 返回值
     final_verdict: str                   # approved / rejected
     final_comment: str
     answer: str

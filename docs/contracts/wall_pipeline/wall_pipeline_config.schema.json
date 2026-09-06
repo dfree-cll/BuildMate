@@ -1,0 +1,1211 @@
+{
+  "$defs": {
+    "BeamRecognitionConfig": {
+      "additionalProperties": false,
+      "description": "Deterministic coupling-beam scope for structural plan sheets.",
+      "properties": {
+        "line_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Line Layers",
+          "type": "array"
+        },
+        "label_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Layers",
+          "type": "array"
+        },
+        "exclude_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude Layers",
+          "type": "array"
+        },
+        "label_pattern": {
+          "default": "\\bLL\\s*-?\\s*\\d+[A-Z]?\\b",
+          "title": "Label Pattern",
+          "type": "string"
+        },
+        "association_distance_m": {
+          "default": 2.0,
+          "exclusiveMinimum": 0,
+          "maximum": 20.0,
+          "title": "Association Distance M",
+          "type": "number"
+        },
+        "elevation_association_distance_m": {
+          "default": 25.0,
+          "exclusiveMinimum": 0,
+          "maximum": 50.0,
+          "title": "Elevation Association Distance M",
+          "type": "number"
+        },
+        "elevation_alignment_tolerance_m": {
+          "default": 0.2,
+          "exclusiveMinimum": 0,
+          "maximum": 5.0,
+          "title": "Elevation Alignment Tolerance M",
+          "type": "number"
+        },
+        "elevation_column_tolerance_m": {
+          "default": 4.0,
+          "exclusiveMinimum": 0,
+          "maximum": 20.0,
+          "title": "Elevation Column Tolerance M",
+          "type": "number"
+        },
+        "min_length_m": {
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "title": "Min Length M",
+          "type": "number"
+        },
+        "min_width_m": {
+          "default": 0.075,
+          "exclusiveMinimum": 0,
+          "title": "Min Width M",
+          "type": "number"
+        },
+        "max_width_m": {
+          "default": 0.8,
+          "exclusiveMinimum": 0,
+          "title": "Max Width M",
+          "type": "number"
+        },
+        "depth_m": {
+          "default": 0.5,
+          "exclusiveMinimum": 0,
+          "maximum": 5.0,
+          "title": "Depth M",
+          "type": "number"
+        }
+      },
+      "title": "BeamRecognitionConfig",
+      "type": "object"
+    },
+    "CalibrationPair": {
+      "additionalProperties": false,
+      "properties": {
+        "source_distance": {
+          "exclusiveMinimum": 0,
+          "title": "Source Distance",
+          "type": "number"
+        },
+        "model_distance_m": {
+          "exclusiveMinimum": 0,
+          "title": "Model Distance M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "source_distance",
+        "model_distance_m"
+      ],
+      "title": "CalibrationPair",
+      "type": "object"
+    },
+    "ColumnRecognitionConfig": {
+      "additionalProperties": false,
+      "description": "Deterministic source-layer policy for structural column outlines.\n\nColumns are deliberately a separate scope from walls.  A drawing often\ncontains column hatch/text layers that must not leak into wall pairing;\nkeeping the policy separate also lets the same source adapter emit both\nevidence types without changing the downstream contracts.",
+      "properties": {
+        "include_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Include Layers",
+          "type": "array"
+        },
+        "exclude_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude Layers",
+          "type": "array"
+        },
+        "profile_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Profile Layers",
+          "type": "array"
+        },
+        "label_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Layers",
+          "type": "array"
+        },
+        "label_pattern": {
+          "default": "\\b(?:GBZ|YBZ)\\s*-?\\s*\\d+[A-Z]?\\b",
+          "title": "Label Pattern",
+          "type": "string"
+        },
+        "profile_match_distance_m": {
+          "default": 5.0,
+          "exclusiveMinimum": 0,
+          "maximum": 20.0,
+          "title": "Profile Match Distance M",
+          "type": "number"
+        },
+        "specification_association_distance_m": {
+          "default": 1.5,
+          "exclusiveMinimum": 0,
+          "maximum": 20.0,
+          "title": "Specification Association Distance M",
+          "type": "number"
+        },
+        "min_profile_area_m2": {
+          "default": 0.05,
+          "exclusiveMinimum": 0,
+          "title": "Min Profile Area M2",
+          "type": "number"
+        },
+        "material_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Material Name"
+        },
+        "classification_code": {
+          "default": "IfcColumn",
+          "title": "Classification Code",
+          "type": "string"
+        },
+        "min_width_m": {
+          "default": 0.2,
+          "exclusiveMinimum": 0,
+          "title": "Min Width M",
+          "type": "number"
+        },
+        "max_width_m": {
+          "default": 5.0,
+          "exclusiveMinimum": 0,
+          "title": "Max Width M",
+          "type": "number"
+        },
+        "min_depth_m": {
+          "default": 0.2,
+          "exclusiveMinimum": 0,
+          "title": "Min Depth M",
+          "type": "number"
+        },
+        "max_depth_m": {
+          "default": 5.0,
+          "exclusiveMinimum": 0,
+          "title": "Max Depth M",
+          "type": "number"
+        },
+        "dedupe_tolerance_m": {
+          "default": 0.02,
+          "maximum": 0.5,
+          "minimum": 0,
+          "title": "Dedupe Tolerance M",
+          "type": "number"
+        },
+        "approved_profile_model_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved Profile Model Path"
+        },
+        "approved_profile_model_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved Profile Model Sha256"
+        },
+        "approved_profile_input_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved Profile Input Sha256"
+        },
+        "approved_profile_source_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved Profile Source Sha256"
+        },
+        "approved_profile_min_axis_match_ratio": {
+          "default": 0.75,
+          "maximum": 1.0,
+          "minimum": 0.5,
+          "title": "Approved Profile Min Axis Match Ratio",
+          "type": "number"
+        }
+      },
+      "title": "ColumnRecognitionConfig",
+      "type": "object"
+    },
+    "CoordinateConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "origin": {
+          "default": "source_origin",
+          "enum": [
+            "source_origin",
+            "revit_project_base_point",
+            "revit_survey_point"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "source_origin": {
+          "default": [
+            0.0,
+            0.0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Source Origin",
+          "type": "array"
+        },
+        "source_unit": {
+          "default": "auto",
+          "enum": [
+            "auto",
+            "mm",
+            "cm",
+            "m",
+            "in",
+            "ft",
+            "pt"
+          ],
+          "title": "Source Unit",
+          "type": "string"
+        },
+        "scale_to_m": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scale To M"
+        },
+        "calibration": {
+          "items": {
+            "$ref": "#/$defs/CalibrationPair"
+          },
+          "title": "Calibration",
+          "type": "array"
+        },
+        "apply_pdf_page_rotation": {
+          "default": true,
+          "title": "Apply Pdf Page Rotation",
+          "type": "boolean"
+        },
+        "rotation_deg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "const": "auto",
+              "type": "string"
+            }
+          ],
+          "default": 0.0,
+          "title": "Rotation Deg"
+        },
+        "translation_m": {
+          "default": [
+            0.0,
+            0.0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Translation M",
+          "type": "array"
+        },
+        "source_frame": {
+          "default": "project_north",
+          "enum": [
+            "project_north",
+            "true_north"
+          ],
+          "title": "Source Frame",
+          "type": "string"
+        },
+        "apply_base_point_rotation": {
+          "default": false,
+          "title": "Apply Base Point Rotation",
+          "type": "boolean"
+        },
+        "frame_offsets_m": {
+          "additionalProperties": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "type": "array"
+          },
+          "title": "Frame Offsets M",
+          "type": "object"
+        }
+      },
+      "title": "CoordinateConfig",
+      "type": "object"
+    },
+    "GridAxisConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "label": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "start": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Start",
+          "type": "array"
+        },
+        "end": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "End",
+          "type": "array"
+        },
+        "source_file_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source File Id"
+        },
+        "frame_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Id"
+        }
+      },
+      "required": [
+        "label",
+        "start",
+        "end"
+      ],
+      "title": "GridAxisConfig",
+      "type": "object"
+    },
+    "GridConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "axes": {
+          "items": {
+            "$ref": "#/$defs/GridAxisConfig"
+          },
+          "title": "Axes",
+          "type": "array"
+        },
+        "include_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Include Layers",
+          "type": "array"
+        },
+        "exclude_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude Layers",
+          "type": "array"
+        },
+        "min_length_m": {
+          "default": 10.0,
+          "exclusiveMinimum": 0,
+          "title": "Min Length M",
+          "type": "number"
+        },
+        "cluster_tolerance_m": {
+          "default": 0.4,
+          "exclusiveMinimum": 0,
+          "maximum": 2.0,
+          "title": "Cluster Tolerance M",
+          "type": "number"
+        },
+        "axis_tolerance_deg": {
+          "default": 2.0,
+          "maximum": 15.0,
+          "minimum": 0,
+          "title": "Axis Tolerance Deg",
+          "type": "number"
+        },
+        "normalize_origin": {
+          "default": false,
+          "title": "Normalize Origin",
+          "type": "boolean"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "title": "GridConfig",
+      "type": "object"
+    },
+    "LevelConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "elevation_m": {
+          "default": 0.0,
+          "title": "Elevation M",
+          "type": "number"
+        },
+        "top_elevation_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Top Elevation M"
+        },
+        "elevation_range": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Elevation Range"
+        },
+        "elevation_source": {
+          "default": "input",
+          "enum": [
+            "input",
+            "drawing",
+            "revit",
+            "unresolved"
+          ],
+          "title": "Elevation Source",
+          "type": "string"
+        },
+        "wall_height_m": {
+          "default": 3.0,
+          "exclusiveMinimum": 0,
+          "maximum": 30,
+          "title": "Wall Height M",
+          "type": "number"
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ],
+      "title": "LevelConfig",
+      "type": "object"
+    },
+    "ModelingStandardConfig": {
+      "additionalProperties": false,
+      "description": "Executable project profile for Chinese national BIM standards.\n\nGB/T documents describe a common information and delivery framework; they\ndo not provide a drop-in wall-recognition algorithm.  This profile keeps\nthe normative references explicit and turns the parts that can be checked\ndeterministically (units, coordinates, classification, provenance and\nconstruction metadata) into pipeline gates.",
+      "properties": {
+        "profile": {
+          "const": "cn_gb_bim_delivery_v1",
+          "default": "cn_gb_bim_delivery_v1",
+          "title": "Profile",
+          "type": "string"
+        },
+        "references": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 3,
+          "title": "References",
+          "type": "array"
+        },
+        "units": {
+          "const": "m",
+          "default": "m",
+          "title": "Units",
+          "type": "string"
+        },
+        "delivery_units": {
+          "const": "mm",
+          "default": "mm",
+          "title": "Delivery Units",
+          "type": "string"
+        },
+        "coordinate_frame": {
+          "default": "project_north",
+          "enum": [
+            "project_north",
+            "true_north"
+          ],
+          "title": "Coordinate Frame",
+          "type": "string"
+        },
+        "classification_system": {
+          "const": "GB/T 51269-2017",
+          "default": "GB/T 51269-2017",
+          "title": "Classification System",
+          "type": "string"
+        },
+        "application_standard": {
+          "const": "GB/T 51212-2016",
+          "default": "GB/T 51212-2016",
+          "title": "Application Standard",
+          "type": "string"
+        },
+        "delivery_standard": {
+          "const": "GB/T 51301-2018",
+          "default": "GB/T 51301-2018",
+          "title": "Delivery Standard",
+          "type": "string"
+        },
+        "construction_standard": {
+          "anyOf": [
+            {
+              "const": "GB/T 51235-2017",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "GB/T 51235-2017",
+          "title": "Construction Standard"
+        },
+        "naming_prefix": {
+          "default": "BM",
+          "maxLength": 16,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Naming Prefix",
+          "type": "string"
+        },
+        "wall_type_prefix": {
+          "default": "BM-WALL",
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Wall Type Prefix",
+          "type": "string"
+        },
+        "column_type_prefix": {
+          "default": "BM-COLUMN",
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_-]+$",
+          "title": "Column Type Prefix",
+          "type": "string"
+        },
+        "require_source_refs": {
+          "default": true,
+          "title": "Require Source Refs",
+          "type": "boolean"
+        },
+        "require_classification_code": {
+          "default": true,
+          "title": "Require Classification Code",
+          "type": "boolean"
+        },
+        "require_instance_parameters": {
+          "default": true,
+          "title": "Require Instance Parameters",
+          "type": "boolean"
+        },
+        "require_level": {
+          "default": true,
+          "title": "Require Level",
+          "type": "boolean"
+        },
+        "require_material": {
+          "default": false,
+          "title": "Require Material",
+          "type": "boolean"
+        },
+        "require_quantities": {
+          "default": true,
+          "title": "Require Quantities",
+          "type": "boolean"
+        }
+      },
+      "title": "ModelingStandardConfig",
+      "type": "object"
+    },
+    "ODAConverterConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "executable": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Executable"
+        },
+        "output_version": {
+          "default": "ACAD2018",
+          "title": "Output Version",
+          "type": "string"
+        },
+        "timeout_seconds": {
+          "default": 300,
+          "maximum": 1800,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "integer"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        }
+      },
+      "title": "ODAConverterConfig",
+      "type": "object"
+    },
+    "OpeningRecognitionConfig": {
+      "additionalProperties": false,
+      "description": "Semantic opening evidence that can explain masked wall geometry.\n\nLabels classify an opening; they never provide coordinates.  Coordinates\nmust come from a closed vector boundary or a bounded vector marker in the\nconfigured source layer scope.",
+      "properties": {
+        "label_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Label Layers",
+          "type": "array"
+        },
+        "boundary_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Boundary Layers",
+          "type": "array"
+        },
+        "exclude_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude Layers",
+          "type": "array"
+        },
+        "label_pattern": {
+          "default": "\\b(?:JD|HOLE|OPENING)\\s*-?\\s*[0-9A-Z]+\\b",
+          "title": "Label Pattern",
+          "type": "string"
+        },
+        "association_distance_m": {
+          "default": 2.0,
+          "exclusiveMinimum": 0,
+          "maximum": 20.0,
+          "title": "Association Distance M",
+          "type": "number"
+        },
+        "min_width_m": {
+          "default": 0.05,
+          "exclusiveMinimum": 0,
+          "maximum": 20.0,
+          "title": "Min Width M",
+          "type": "number"
+        },
+        "max_width_m": {
+          "default": 20.0,
+          "exclusiveMinimum": 0,
+          "maximum": 100.0,
+          "title": "Max Width M",
+          "type": "number"
+        },
+        "min_depth_m": {
+          "default": 0.05,
+          "exclusiveMinimum": 0,
+          "maximum": 20.0,
+          "title": "Min Depth M",
+          "type": "number"
+        },
+        "max_depth_m": {
+          "default": 20.0,
+          "exclusiveMinimum": 0,
+          "maximum": 100.0,
+          "title": "Max Depth M",
+          "type": "number"
+        },
+        "elevation_reference": {
+          "default": "unresolved",
+          "enum": [
+            "unresolved",
+            "project",
+            "level"
+          ],
+          "title": "Elevation Reference",
+          "type": "string"
+        },
+        "sill_elevation_overrides_m": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Sill Elevation Overrides M",
+          "type": "object"
+        },
+        "schedule_alignment_tolerance_m": {
+          "default": 0.25,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Schedule Alignment Tolerance M",
+          "type": "number"
+        },
+        "schedule_search_distance_m": {
+          "default": 25.0,
+          "exclusiveMinimum": 0,
+          "maximum": 50,
+          "title": "Schedule Search Distance M",
+          "type": "number"
+        }
+      },
+      "title": "OpeningRecognitionConfig",
+      "type": "object"
+    },
+    "ReviewGateConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "min_confidence": {
+          "default": 0.7,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Confidence",
+          "type": "number"
+        },
+        "max_dangling_endpoint_ratio": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Max Dangling Endpoint Ratio",
+          "type": "number"
+        }
+      },
+      "title": "ReviewGateConfig",
+      "type": "object"
+    },
+    "RevitConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "target_model_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Model Path"
+        },
+        "floor_code": {
+          "default": "",
+          "maxLength": 32,
+          "title": "Floor Code",
+          "type": "string"
+        },
+        "wall_type_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wall Type Name"
+        }
+      },
+      "title": "RevitConfig",
+      "type": "object"
+    },
+    "SourceConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "pdf",
+            "dwg",
+            "dxf"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "files": {
+          "items": {
+            "$ref": "#/$defs/SourceFileConfig"
+          },
+          "minItems": 1,
+          "title": "Files",
+          "type": "array"
+        },
+        "converter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ODAConverterConfig"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "type",
+        "files"
+      ],
+      "title": "SourceConfig",
+      "type": "object"
+    },
+    "SourceFileConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        }
+      },
+      "required": [
+        "path",
+        "role"
+      ],
+      "title": "SourceFileConfig",
+      "type": "object"
+    },
+    "WallRecognitionConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "include_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Include Layers",
+          "type": "array"
+        },
+        "exclude_layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude Layers",
+          "type": "array"
+        },
+        "min_thickness_m": {
+          "default": 0.075,
+          "exclusiveMinimum": 0,
+          "title": "Min Thickness M",
+          "type": "number"
+        },
+        "max_thickness_m": {
+          "default": 0.6,
+          "exclusiveMinimum": 0,
+          "title": "Max Thickness M",
+          "type": "number"
+        },
+        "thickness_tolerance_m": {
+          "default": 0.005,
+          "maximum": 0.05,
+          "minimum": 0,
+          "title": "Thickness Tolerance M",
+          "type": "number"
+        },
+        "min_length_m": {
+          "default": 0.3,
+          "exclusiveMinimum": 0,
+          "title": "Min Length M",
+          "type": "number"
+        },
+        "min_overlap_ratio": {
+          "default": 0.45,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Overlap Ratio",
+          "type": "number"
+        },
+        "parallel_tolerance_deg": {
+          "default": 2.0,
+          "maximum": 15,
+          "minimum": 0,
+          "title": "Parallel Tolerance Deg",
+          "type": "number"
+        },
+        "dedupe_tolerance_m": {
+          "default": 0.02,
+          "maximum": 0.5,
+          "minimum": 0,
+          "title": "Dedupe Tolerance M",
+          "type": "number"
+        },
+        "break_gap_m": {
+          "default": 0.06,
+          "maximum": 3.0,
+          "minimum": 0,
+          "title": "Break Gap M",
+          "type": "number"
+        },
+        "junction_tolerance_m": {
+          "default": 0.15,
+          "exclusiveMinimum": 0,
+          "maximum": 1.0,
+          "title": "Junction Tolerance M",
+          "type": "number"
+        },
+        "schedule_alignment_tolerance_m": {
+          "default": 0.1,
+          "exclusiveMinimum": 0,
+          "maximum": 1.0,
+          "title": "Schedule Alignment Tolerance M",
+          "type": "number"
+        },
+        "schedule_alignment_gap_m": {
+          "default": 8.0,
+          "exclusiveMinimum": 0,
+          "maximum": 50.0,
+          "title": "Schedule Alignment Gap M",
+          "type": "number"
+        },
+        "specification_association_distance_m": {
+          "default": 0.8,
+          "exclusiveMinimum": 0,
+          "maximum": 5.0,
+          "title": "Specification Association Distance M",
+          "type": "number"
+        },
+        "allow_single_line_evidence": {
+          "default": false,
+          "title": "Allow Single Line Evidence",
+          "type": "boolean"
+        },
+        "material_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Material Name"
+        },
+        "classification_code": {
+          "default": "IfcWall",
+          "title": "Classification Code",
+          "type": "string"
+        }
+      },
+      "title": "WallRecognitionConfig",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "buildmate.wall-pipeline-config/1.0",
+      "default": "buildmate.wall-pipeline-config/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "tenant_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "project_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Project Id",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceConfig"
+    },
+    "coordinate": {
+      "$ref": "#/$defs/CoordinateConfig"
+    },
+    "grid": {
+      "$ref": "#/$defs/GridConfig"
+    },
+    "wall": {
+      "$ref": "#/$defs/WallRecognitionConfig"
+    },
+    "column": {
+      "$ref": "#/$defs/ColumnRecognitionConfig"
+    },
+    "opening": {
+      "$ref": "#/$defs/OpeningRecognitionConfig"
+    },
+    "beam": {
+      "$ref": "#/$defs/BeamRecognitionConfig"
+    },
+    "review_gate": {
+      "$ref": "#/$defs/ReviewGateConfig"
+    },
+    "modeling_standard": {
+      "$ref": "#/$defs/ModelingStandardConfig"
+    },
+    "level": {
+      "$ref": "#/$defs/LevelConfig"
+    },
+    "revit": {
+      "$ref": "#/$defs/RevitConfig"
+    },
+    "output_dir": {
+      "default": "wall_pipeline_output",
+      "title": "Output Dir",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "project_id",
+    "source",
+    "level"
+  ],
+  "title": "WallPipelineConfig",
+  "type": "object"
+}

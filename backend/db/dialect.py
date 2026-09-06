@@ -13,15 +13,6 @@ def is_postgres() -> bool:
 def upsert_purchase_order_sql() -> str:
     """采购单 upsert（两方言统一 ON CONFLICT：按 order_no 冲突时只更新可变列，
     保留原 id/created_at —— 旧的 INSERT OR REPLACE 是删除+重插语义，会重置创建时间破坏审计时间线）"""
-    if is_postgres():
-        return """
-            INSERT INTO purchase_orders (id, tenant_id, user_id, order_no, material_name, quantity, unit_price, total_amount, status, ai_result, approved_by)
-            VALUES (:id, :tenant_id, :user_id, :order_no, :material_name, :quantity, :unit_price, :total_amount, :status, :ai_result, :approved_by)
-            ON CONFLICT (order_no) DO UPDATE SET
-              status=excluded.status, ai_result=excluded.ai_result,
-              quantity=excluded.quantity, unit_price=excluded.unit_price,
-              total_amount=excluded.total_amount, approved_by=excluded.approved_by
-        """
     return """
         INSERT INTO purchase_orders (id, tenant_id, user_id, order_no, material_name, quantity, unit_price, total_amount, status, ai_result, approved_by)
         VALUES (:id, :tenant_id, :user_id, :order_no, :material_name, :quantity, :unit_price, :total_amount, :status, :ai_result, :approved_by)
@@ -64,4 +55,29 @@ def upsert_knowledge_chunk_sql() -> str:
     return """
         INSERT OR REPLACE INTO knowledge_chunks (id, content, vector, source_name, doc_id, chunk_index, tenant_id, updated_at)
         VALUES (:id, :content, :vector, :source_name, :doc_id, :chunk_index, :tenant_id, :updated_at)
+    """
+
+
+def insert_knowledge_pending_sql() -> str:
+    """Insert a knowledge-gap item without relying on one dialect's syntax.
+
+    The pending queue uses a deterministic id derived from tenant + question,
+    so retries are idempotent.  Keep the conflict clause explicit because the
+    SQLite and PostgreSQL parsers do not accept exactly the same forms on all
+    supported versions.
+    """
+    if is_postgres():
+        return """
+            INSERT INTO knowledge_pending_queue (
+                id, tenant_id, user_id, question, confidence, status
+            ) VALUES (
+                :id, :tenant_id, :user_id, :question, :confidence, 'pending'
+            ) ON CONFLICT (id) DO NOTHING
+        """
+    return """
+        INSERT OR IGNORE INTO knowledge_pending_queue (
+            id, tenant_id, user_id, question, confidence, status
+        ) VALUES (
+            :id, :tenant_id, :user_id, :question, :confidence, 'pending'
+        )
     """

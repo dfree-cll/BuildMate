@@ -19,30 +19,44 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy import text
 from backend.db.session import engine
 from backend.db.schema import METADATA
+from backend.config import get_settings
 
 
 async def init():
     # 建表（幂等；唯一事实源 backend/db/schema.py）
     async with engine.begin() as conn:
         await conn.run_sync(METADATA.create_all)
-    # 灌种子用户（密码都是 demo123，bcrypt 哈希；角色与 mock_users 对齐，含 teacher01——H4）
+    # 灌种子用户（密码都是 demo123，bcrypt 哈希；角色与 mock_users 对齐）。
     async with engine.begin() as conn:
         from backend.core.security import hash_password
-        from backend.db.dialect import is_postgres
         ph = hash_password("demo123")
-        for name, role in [("admin", "admin"), ("buyer01", "buyer"), ("pm01", "project"), ("teacher01", "teacher")]:
+        # 审核角色命名迁移：保留用户主键和历史引用，只更新登录名/角色并
+        # bump token_version，使携带旧角色的令牌立即失效。
+        reviewer_exists = (await conn.execute(text(
+            "SELECT 1 FROM users WHERE username = 'reviewer01'"
+        ))).fetchone()
+        if reviewer_exists is None:
+            await conn.execute(text(
+                "UPDATE users SET username = 'reviewer01', email = 'reviewer01@buildmate.local', "
+                "role = 'reviewer', token_version = token_version + 1 "
+                "WHERE username = 'teacher01'"
+            ))
+        await conn.execute(text(
+            "UPDATE users SET role = 'reviewer', token_version = token_version + 1 "
+            "WHERE role = 'teacher'"
+        ))
+        await conn.execute(text(
+            "UPDATE users SET is_active = false, token_version = token_version + 1 "
+            "WHERE username = 'teacher01'"
+        ))
+        for name, role in [("admin", "admin"), ("buyer01", "buyer"), ("pm01", "project"), ("reviewer01", "reviewer")]:
             # 存在即更新（幂等修复：旧库占位哈希/旧角色重跑即被纠正；DO NOTHING 修不了陈旧种子）
-            if is_postgres():
-                sql = ("INSERT INTO users (id, tenant_id, username, email, password_hash, role) "
-                       "VALUES (:id, 'tenant_default', :name, :email, :ph, :role) "
-                       "ON CONFLICT (username) DO UPDATE SET password_hash=excluded.password_hash, role=excluded.role")
-            else:
-                sql = ("INSERT INTO users (id, tenant_id, username, email, password_hash, role) "
-                       "VALUES (:id, 'tenant_default', :name, :email, :ph, :role) "
-                       "ON CONFLICT (username) DO UPDATE SET password_hash=excluded.password_hash, role=excluded.role")
+            sql = ("INSERT INTO users (id, tenant_id, username, email, password_hash, role) "
+                   "VALUES (:id, 'tenant_default', :name, :email, :ph, :role) "
+                   "ON CONFLICT (username) DO UPDATE SET password_hash=excluded.password_hash, role=excluded.role")
             await conn.execute(text(sql),
                 {"id": str(uuid.uuid4()), "name": name, "email": f"{name}@buildmate.local", "role": role, "ph": ph})
-    print("✅ 数据库初始化完成（buildmate.db）")
+    print(f"✅ 数据库初始化完成（{get_settings().database_url}）")
 
 
 async def _dispose_engine():

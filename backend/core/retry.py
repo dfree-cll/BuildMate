@@ -63,6 +63,7 @@ class AgentFallbackHandler:
             "bid_review": cls._bid_review_fallback,
             "procurement": cls._procurement_fallback,
             "negotiation": cls._negotiation_fallback,
+            "drawing2bim": cls._drawing2bim_fallback,
         }
         handler = fallback_map.get(agent_type)
         if handler:
@@ -86,6 +87,11 @@ class AgentFallbackHandler:
     @classmethod
     async def _negotiation_fallback(cls) -> dict:
         return {"fallback_used": True, "content": "谈判服务暂时不可用，已记录本次对话。"}
+
+    @classmethod
+    async def _drawing2bim_fallback(cls) -> dict:
+        return {"fallback_used": True, "content": "图纸合规审查服务暂时不可用，请稍后重试。",
+                "structured_output": None}
 
 
 def _system_fallback_response(agent_type: str) -> dict:

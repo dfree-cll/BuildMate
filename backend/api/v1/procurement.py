@@ -1,6 +1,7 @@
 """采购审批（HitL）Agent REST 接口"""
 import json
 import uuid
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from langgraph.types import Command
@@ -16,13 +17,24 @@ router = APIRouter()
 logger = get_logger(__name__)
 
 
+class ProcurementItem(BaseModel):
+    material_name: str
+    quantity: int = 1
+    unit_price: float = 0.0
+    unit: str = "吨"          # 计量单位（吨/米/个/立方米/袋…）
+    spec: str = ""
+    supplier: str = ""
+
+
 class ProcurementBody(BaseModel):
+    project_id: str | None = Field(default=None, max_length=64)
     # ★ H2 修复：order_no 一律服务端生成。客户端传入的同名字段会被忽略（pydantic 默认丢弃未知字段），
     # 防止用他人单号覆盖 purchase_orders 行（旧 INSERT OR REPLACE 以 order_no 为冲突键）
     material_name: str = "螺纹钢 HRB400"
     quantity: int = 100
     unit_price: float = 3600.0
-    session_id: str = "default"
+    session_id: str = Field("default", min_length=1, max_length=128)
+    items: Optional[list[ProcurementItem]] = None   # 多品类（技术标/商务标等分开投）
 
 
 class ProcurementDecision(BaseModel):
@@ -41,14 +53,22 @@ async def create_procurement_order(body: ProcurementBody, current_user: dict = D
     graph = orchestrator._get_agent_graph(AgentType.PROCUREMENT)
     order_id = str(uuid.uuid4())
     order_no = "PO-" + str(uuid.uuid4())[:8].upper()   # 服务端生成（H2）
-    total = round(body.quantity * body.unit_price, 2)
+    items = [it.model_dump() for it in body.items] if body.items else None
+    if items:
+        total = round(sum(i["quantity"] * i["unit_price"] for i in items), 2)
+        material_label = "、".join(i["material_name"] for i in items)
+    else:
+        total = round(body.quantity * body.unit_price, 2)
+        material_label = body.material_name
     state = {
         "user_id": current_user["user_id"], "tenant_id": current_user["tenant_id"],
         "session_id": body.session_id, "order_id": order_id, "order_no": order_no,
-        "material_name": body.material_name, "quantity": body.quantity,
+        "project_id": body.project_id, "memory_turn_id": order_id,
+        "material_name": material_label, "quantity": body.quantity,
         "unit_price": body.unit_price, "total_amount": total,
+        "items": items,   # 多品类（None 时规则引擎回退单品类字段）
     }
-    config = build_config(current_user["user_id"], order_no)  # 用 order_no 作 thread key，保证 confirm 能 resume
+    config = build_config(current_user["user_id"], order_no, tenant_id=current_user["tenant_id"], agent="procurement")
     result = await graph.ainvoke(state, config=config)
     # ★ HitL 修复：interrupt 挂起的订单从未落库 → pending 列表恒空
     # 无论是否需人工审批，先写一条订单记录（pending/approved 状态由 result 决定）
@@ -59,7 +79,7 @@ async def create_procurement_order(body: ProcurementBody, current_user: dict = D
             await conn.execute(text(upsert_purchase_order_sql()), {
                 "id": order_id, "tenant_id": current_user["tenant_id"],
                 "user_id": current_user["user_id"], "order_no": order_no,
-                "material_name": body.material_name, "quantity": body.quantity,
+                "material_name": material_label, "quantity": body.quantity,
                 "unit_price": body.unit_price, "total_amount": total,
                 "status": "pending" if needs_human else (result.get("final_verdict", "approved")),
                 "ai_result": json.dumps(result.get("ai_conclusion", {}), ensure_ascii=False),
@@ -82,9 +102,9 @@ async def create_procurement_order(body: ProcurementBody, current_user: dict = D
 
 @router.post("/procurement/orders/{order_no}/confirm")
 async def confirm_procurement(order_no: str, decision: ProcurementDecision,
-                              current_user: dict = Depends(require_role("admin", "teacher"))):
+                              current_user: dict = Depends(require_role("admin", "reviewer"))):
     """人工审批：Command(resume=...) 恢复被 interrupt 的图
-    安全：仅 admin/teacher 可审批；operator 强制取当前用户（客户端不可伪造）
+    安全：仅 admin/reviewer 可审批；operator 强制取当前用户（客户端不可伪造）
     ★ H1 修复：中断 checkpoint 在【创建者】线程上，thread 归属必须反查订单创建者重建，
     不能用审批人的 user_id（否则 resume 落在空线程，买家下单/管理员审批必挂）"""
     # ① 反查订单归属与状态（purchase_orders 是归属的事实源）
@@ -101,10 +121,19 @@ async def confirm_procurement(order_no: str, decision: ProcurementDecision,
 
     orchestrator = get_orchestrator()
     graph = orchestrator._get_agent_graph(AgentType.PROCUREMENT)
-    config = build_config(owner_user_id, order_no)
+    config = build_config(owner_user_id, order_no, tenant_id=current_user["tenant_id"], agent="procurement")
 
     # ② checkpoint 预检：线程上确有待恢复的中断（防 DB 与 checkpoint 漂移：中断已消费/丢失时给出明确 409）
     snap = await graph.aget_state(config)
+    if snap is None or not snap.next:
+        # In-flight orders from before scoped keys must still be reviewable.
+        # Never load legacy state unless its saved ownership and order match DB.
+        legacy_config = build_config(owner_user_id, order_no)
+        legacy = await graph.aget_state(legacy_config)
+        values = legacy.values if legacy else {}
+        if (legacy and legacy.next and values.get("tenant_id") == current_user["tenant_id"]
+                and values.get("user_id") == owner_user_id and values.get("order_no") == order_no):
+            config, snap = legacy_config, legacy
     if snap is None or not snap.next:
         raise HTTPException(status_code=409, detail="该订单没有待审批任务（中断已被消费或检查点缺失）")
 
@@ -129,8 +158,8 @@ async def confirm_procurement(order_no: str, decision: ProcurementDecision,
 
 # ── 采购审批：列表/待审批──
 @router.get("/procurement/pending")
-async def procurement_pending(current_user: dict = Depends(require_role("admin", "teacher"))):
-    """待人工审批的采购单列表（仅 admin/teacher）"""
+async def procurement_pending(current_user: dict = Depends(require_role("admin", "reviewer"))):
+    """待人工审批的采购单列表（仅 admin/reviewer）"""
     async with engine.connect() as conn:
         rows = (await conn.execute(text(
             "SELECT order_no, material_name, quantity, unit_price, total_amount, ai_result, created_at "

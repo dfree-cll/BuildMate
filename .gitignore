@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 buildmate.db
+buildmate_local.db
 *.log
 _server*.log
 
@@ -9,10 +10,47 @@ _server*.log
 .env
 .env.*
 !.env.example
-!.env.production.example
 
 # 测试缓存
 .pytest_cache/
+.pytest_tmp/
+.pycache-*/
+.pytest-run-*/
+.pytest_tmp_*/
+.pytest-tmp-*/
+.pytest_tmp*.db
+.pytest-test-*.db
+.pytest-basetemp*/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.coverage
+coverage.xml
+htmlcov/
+.tmp_*
+data/runtime/*
+!data/runtime/.gitkeep
+!data/runtime/revit/.gitkeep
+!data/runtime/revit/json_in/.gitkeep
+!data/runtime/revit/rvt_out/.gitkeep
+!data/runtime/db/
+!data/runtime/db/.gitkeep
+!data/runtime/logs/
+!data/runtime/logs/.gitkeep
+data/revit/*
+!data/revit/buildmate_demo.rvt
+data/approved_profiles/
+data/generated/*
+!data/generated/.gitkeep
+data/uploads/*
+!data/uploads/.gitkeep
+data/uploads_v2/*
+!data/uploads_v2/.gitkeep
+data/deliveries/*
+!data/deliveries/.gitkeep
+data/archive/*
+!data/archive/.gitkeep
+tmp/
 *.egg-info
 test_hitl.db
 checkpoints.db
@@ -29,4 +67,3 @@ no_such_models_dir/
 frontend/node_modules/
 frontend/static/
 frontend/dist/
-!.env.local.example

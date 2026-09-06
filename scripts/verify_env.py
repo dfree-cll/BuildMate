@@ -14,6 +14,13 @@ import os
 import sys
 from pathlib import Path
 
+# Windows PowerShell commonly exposes a GBK stream while the diagnostics use
+# status symbols.  Reconfigure only the process-local streams so the same
+# checker works from a terminal, PyCharm and CI without changing user locale.
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)   # 锚定 CWD：config 的 .env 与 data/ 检查均相对项目根

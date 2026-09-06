@@ -8,7 +8,7 @@ from backend.agents.procurement.nodes import _run_rule_engine, merge_node, human
 def test_rule_engine_marks_large_order():
     """大额采购触发 review"""
     st = _run_rule_engine({
-        "total_amount": 500000, "unit_price": 3600, "quantity": 100,
+        "material_name": "螺纹钢", "total_amount": 500000, "unit_price": 3600, "quantity": 100,
     })
     assert st["verdict"] == "review"
     assert any("大额" in i for i in st["issues"])
@@ -17,7 +17,7 @@ def test_rule_engine_marks_large_order():
 def test_rule_engine_passes_small_order():
     """小额采购 pass"""
     st = _run_rule_engine({
-        "total_amount": 1000, "unit_price": 100, "quantity": 10,
+        "material_name": "螺纹钢", "total_amount": 1000, "unit_price": 100, "quantity": 10,
     })
     assert st["verdict"] == "pass"
 
@@ -29,4 +29,4 @@ async def test_hitl_small_auto_approve():
         "total_amount": 500, "order_no": "PO-T",
     })
     assert st["final_verdict"] == "approved"
-    assert st["teacher_decision"]["decision"] == "approved"
+    assert st["reviewer_decision"]["decision"] == "approved"

@@ -1,370 +1,171 @@
-# BuildMate Demo — 建筑行业智能助手
+# BuildMate
 
-面向建筑行业采购/商务场景的多 Agent 智能助手 Demo：标书审查、供应商谈判、采购审批、规范知识问答四大 Agent 协同，统一入口 + SSE 流式输出。
+面向建筑行业的 AI 协作平台。系统保留 BIM 独立入口，同时提供独立问答入口；问答可通过受控意图路由调用建筑规范查询、标书查询、合同审核和采购/供应商 Workflow。BIM 主交付链路是 `PDF/DWG/DXF → WallEvidence → WallModel → 人工审批 → Revit 2020 → 独立叠图`。
 
-## ✅ 已验证可运行（2026-08-15 冒烟测试 9/9 通过）
+## 能力概览
 
-| # | 场景 | 验证点 |
-|---|---|---|
-| 1 | 登录 | JWT 签发（mock 用户 admin/demo123） |
-| 2 | 规则前置拦截 | "你好" → 零 Token 模板回复 |
-| 3 | LLM 路由 | "西安螺纹钢多少钱" → qa + SSE token 流 |
-| 4 | 意图引导 | "帮我审查投标文件" → guidance 卡片 |
-| 5 | 多 Agent 计划 | "投标准备一条龙" → pipeline_plan |
-| 6 | Orchestrator 直达 | bid_review 四维并行评审 |
-| 7 | 采购审批-小额 | 规则+LLM 双轨自动通过 |
-| 8 | 采购审批-HitL | 大额单 interrupt → resume → approved |
-| 9 | 供应商谈判 | 状态机多阶段推进（quote→tech→…） |
+Agent 记忆已统一接入：问答历史、投标版本、采购结果、谈判阶段和 BIM 设置/续建关联。各页面可恢复历史或新建会话，记忆按账号、租户、项目和 Agent 隔离；用法与边界见 [Agent 记忆说明](docs/AGENT_MEMORY.md)。升级由启动时的 `0011_agent_memory` 迁移完成。
 
-## 架构（与 行业标杆同构）
-
-```
-用户一句话
-  │  POST /api/v1/chat/stream（SSE）
-① 规则前置拦截 _pre_filter ── 命中"你好/谢谢"等 ──→ 零 Token 模板回复
-② LLM 路由 _llm_route ── 6 类意图：bid_review / qa / procurement / negotiation / clarify / out_of_scope
-③ 推送 routing_decision 事件 → 分发：
-   - qa          → 单 Agent 流式执行知识问答图（RAG）
-   - bid_review / procurement / negotiation → guidance 引导跳转
-   - multi_agent → pipeline_plan（投标准备 = 投标审查 → 采购审批）
-   - clarify     → 追问澄清
-④ done 事件收尾
-```
-
-## 四大建筑 Agent（对标行业范式 四范式）
-
-| 建筑 Agent | 范式 | 对标行业范式 | 关键实现 |
-|---|---|---|---|
-| 投标文件审查 | 并行评审 fan-out/fan-in | 第 4 章 简历审查 | asyncio.gather 四维并行（商务/技术/资质/合规） |
-| 建筑知识问答 | RAG | 第 5 章 智能问答 | 本地向量检索 + HyDE/Multi-Query + 置信度路由 |
-| 采购/合同审批 | Human-in-the-Loop | 第 6 章 试卷批改 | 规则引擎+LLM 双轨 + interrupt()/Command(resume=) |
-| 供应商谈判/交底 | 状态机 + SSE | 第 7 章 模拟面试 | 5 阶段状态机（quote→tech→delivery→sign→done） |
-
-## 快速开始
-
-```bash
-cd F:\BuildMate\BuildMateDemo
-
-# 1. 创建虚拟环境并安装依赖
-python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-
-# 2. 初始化数据库 + 知识库
-python scripts/init_db.py
-python scripts/seed_knowledge.py
-
-# 3. 启动（.env 已配置 DeepSeek key → 真实 LLM 模式；清空 LLM_API_KEY 即回 Mock）
-python -m uvicorn backend.main:app --port 8000
-
-# 4. 打开前端
-#    http://localhost:8000   （登录：admin / demo123）
-
-# 5. 冒烟测试
-python tests/test_smoke.py
-```
-
-## 启用真实语义向量（可选，推荐）
-
-默认 Mock 模式用字符哈希向量（256 维，语义区分度有限）。启用真实嵌入后，Dense 路变为 BGE-M3 语义向量（1024 维），混合检索效果显著提升（错别字/同义词也能召回）。
-
-### 步骤
-1. 在 `.env` 填入硅基流动（或任意 OpenAI 兼容）embedding key：
-   ```ini
-   EMBEDDING_API_KEY=sk-你的key
-   EMBEDDING_BASE_URL=https://api.siliconflow.cn/v1
-   EMBEDDING_MODEL=BAAI/bge-m3
-   ```
-2. 重新灌知识库（必须重灌，向量维度从 256 → 1024）：
-   ```bash
-   python scripts/seed_knowledge.py
-   ```
-3. 重启服务即可。若 key 失效或网络异常，系统**自动降级回哈希向量**（无需干预）。
-
-> ⚠️ 注意：`D:\SmartVoyage\SmartVoyage\config.py` 里的旧硅基流动 key 已失效（403），请用你自己账户新申请的 key。
-
-## 真实语义嵌入（BGE-M3）已接入 ✅
-
-使用项目虚拟环境（Python 3.11 + transformers + FlagEmbedding）运行 demo，本地加载 `models/embedding/bge-m3`（1024 维中文语义向量；可通过 `MODELS_ROOT` 环境变量指定模型目录）。
-
-### 启动方式
-```bash
-# 启动（bge-m3 首次加载约 15 秒）
-python -m uvicorn backend.main:app --port 8000
-
-# 重灌知识库（1024 维向量）
-python scripts/seed_knowledge.py
-```
-
-### 三级嵌入降级
-1. **本地 BGE-m3**（1024 维语义，优先）→ 2. **API embedding**（需 key）→ 3. **哈希向量**（256 维兜底）
-真实语义向量解决了哈希向量做不到的：**错别字/同义词召回**（如"深垦坑"→"深基坑"、"钢筋"→"螺纹钢"）。
-
-### 样本测试体系（39 条）
-`data\test_samples.json`（39 条覆盖：价格/规范/招标/租赁/施工方案 + 同义词/错别字 + 库外问题 + 寒暄）
-`tests\test_samples.py` 批量跑 → **39/39 (100%) 通过** ✅
-
-## 当前运行配置（2026-08）
-
-- **LLM**：DeepSeek 官方 API（`https://api.deepseek.com/v1`，模型 `deepseek-chat` / `deepseek-v4-flash`），已配置真实 key → **真实 LLM 模式**（非 Mock）
-- **生成分档**：融合分 ≥0.6 → 严格 RAG（基于知识库）；0.4~0.6 → rag_hybrid（知识库为参考 + 真实 LLM 组织）；<0.4 → llm_direct（真实模型自由回答）
-- **Embedding**：未配置（DeepSeek 无 embedding API）→ 混合检索的 Dense 路仍用本地哈希向量 + BM25 Sparse 路
-- 想回 Mock 模式：清空 `.env` 的 `LLM_API_KEY` 后重启即可
-
-## Mock 模式 vs 真实 LLM
-
-- **Mock 模式（默认）**：未配置 `LLM_API_KEY`，LLM 调用返回本地规则模板，RAG 用字符哈希向量，全链路（SSE、路由、图谱、HitL）照常工作。**零成本、可离线演示、可 CI**。
-- **真实 LLM 模式**：在 `.env` 填入 `LLM_API_KEY`（OpenAI 兼容，如硅基流动 DeepSeek-V3），自动切换真实模型；嵌入可用 `EMBEDDING_API_KEY`（BAAI/bge-m3）。
+- **智能工作台与平台化任务控制**：SSE 流式问答，支持 `TaskPlan` 单/复合任务预览、注册领域路由和 `TaskHandoffPackage`；投标、采购、谈判在同一工作台中打开独立业务面板，补齐参数并确认后调用既有接口。合同预审通过受控 Workflow 执行，证据不足时转人工审核。
+- **AEC 建模链路**：文档解析 → 图纸感知 → Model IR → BIM 编译与校验 → Windows Revit Worker。
+- **通用墙体链路**：PDF/DWG adapter → WallEvidence → 确定性几何/拓扑 → 人工批准 → Revit → 独立叠图。
+- **BIM 泛化设计**：通用内核、专业构件插件、来源适配器和目标编译器的演进边界见 [BIM 泛化设计](docs/BIM_GENERALIZATION.md)。
+- **企业基础能力**：JWT、角色控制、租户字段、限流、重试、熔断、会话记忆与 LLM 调用统计。
+- **可选基础设施**：生产可使用 PostgreSQL、RabbitMQ、Redis、MinIO/S3、Milvus；未配置时可用 SQLite 和本地向量能力运行开发模式。
 
 ## 目录结构
 
-```
+~~~text
 BuildMateDemo/
-  backend/
-    main.py            # FastAPI 装配（lifespan/CORS/路由/静态页）
-    config.py          # pydantic-settings 配置中心
-    dependencies.py    # JWT 认证依赖注入
-    core/
-      orchestrator.py  # 单 Agent 直达 + 多 Agent Pipeline
-      llm_factory.py   # LLM 工厂（Mock/真实双模式）
-      knowledge_base.py # 本地向量库（Milvus 可选后端，哈希向量降级）
-      reranker.py      # bge-reranker-large 精排
-      query_classifier.py  # 意图路由分类
-      pdf_parser.py / ifc_parser.py / bim_review.py / material_prices.py  # 领域服务
-      retry.py         # 三层兜底（重试→降级→系统兜底）
-      memory.py        # MemorySaver + thread_id
-      observability.py # LLM 调用追踪（耗时/成本）
-      logger.py / exceptions.py / security.py / state_store.py / llm_text.py
-    agents/
-      qa/              # 知识问答（RAG：classify→retrieve→generate）
-      bid_review/      # 投标审查（四维并行评审）
-      procurement/     # 采购审批（HitL interrupt/resume）
-      negotiation/     # 供应商谈判（状态机）
-    api/v1/
-      unified_chat.py  # ★ 统一入口（_pre_filter + _llm_route + SSE 分发）
-      bid_review.py    # 标书审查 REST 接口
-      procurement.py   # 采购审批 REST 接口
-      negotiation.py   # 谈判 SSE 接口
-      qa.py            # 问答 + 知识待补闭环接口
-      bim_api.py       # BIM 审图接口
-      auth.py          # 登录
-    mcp/
-      knowledge_base_server.py / web_search_server.py / client.py
-    db/
-      dialect.py       # SQLite ↔ PostgreSQL 方言自适应
-      schema.py        # SQLAlchemy 模型
-      session.py       # 异步会话
-    data/mock/         # 模拟用户（admin/buyer/project）
-  scripts/
-    init_db.py         # 建表 + 模拟用户
-    seed_knowledge.py  # 知识库灌入
-    start_all.py       # 一键启动
-  data/knowledge/      # 建筑行业知识库（建材价格/规范/政策/施工方案）
-  frontend/static/     # 前端页面（SSE 客户端）
-  tests/               # 单元 + HITL + 冒烟测试（51 用例）
-```
+├─ frontend/                 Vue 3 体验层
+├─ backend/
+│  ├─ api/                   API 与安全边界（当前业务合同与兼容入口）
+│  ├─ domain/                领域合同、状态机、Model IR
+│  ├─ application/           任务、制品和工作流用例
+│  ├─ ports/                 Artifact 存储边界（其余适配器由应用服务直接装配）
+│  ├─ adapters/              DB、Outbox、RabbitMQ、本地/S3 实现
+│  ├─ rag/                   文档入库、混合检索、引用与评估
+│  ├─ agents/                BIM Agent 与问答路由后的受控业务能力
+│  ├─ core/                  编排、LLM、记忆、重试、熔断与可观测性
+│  ├─ engines/               AEC 领域引擎：解析、Model IR、编译、校验
+│  ├─ mcp/                   MCP Gateway 与工具客户端
+│  └─ db/                    数据库模型、会话与方言适配
+├─ workers/
+│  ├─ revit_mcp/             Windows Revit MCP Worker
+│  ├─ revit_bridge/          Loopback 安全 Bridge（AST/Dry-run/审批）
+│  └─ pyrevit/               Revit 内执行的 pyRevit 脚本主副本
+├─ scripts/                  当前初始化、运行、合同导出与 Revit 同步命令
+├─ data/                     知识、已批准证据、Revit 基准与运行时数据
+├─ migrations/               Alembic 数据库迁移
+├─ docs/                     架构、协议和部署文档
+├─ requirements.txt          唯一 Python 依赖清单（运行、测试、Worker 共用）
+└─ .env.example              唯一环境变量模板
+~~~
 
-## 架构演进记录（2026-08）
+架构总览（六层、两入口、三条主链）见 [架构总览](docs/ARCHITECTURE.md)；任务理解、交接与共享 RAG 见 [技术设计](docs/TECH_DESIGN.md)；技术选型、数据库和模块索引见 [全栈总体设计](docs/DESIGN.md)。
 
-按模块化多 Agent 范式完成的能力升级：
+## 本地开发
 
-| 模块 | 升级内容 |
+要求：Python 3.11+、Node.js 20+。Docker 和 Revit 均为可选能力。
+
+~~~powershell
+# 1. 配置环境（不填 LLM_API_KEY 即使用离线 Mock 模式）
+Copy-Item .env.example .env
+
+# 2. 安装后端与测试依赖
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+
+# 3. 初始化本地数据库与知识库
+.\.venv\Scripts\python scripts/init_db.py
+.\.venv\Scripts\python scripts/seed_knowledge.py
+
+# （可选）仅 local/test 且明确确认时重置演示库
+.\.venv\Scripts\python scripts/reset_demo_db.py --confirm RESET_DEMO_DB
+
+# 4. 启动后端
+.\.venv\Scripts\python -m uvicorn backend.main:app --reload --port 8000
+~~~
+
+另开一个终端启动前端：
+
+~~~powershell
+cd frontend
+npm ci
+npm run dev
+~~~
+
+访问 <http://localhost:3000>。开发账户由初始化脚本创建；如需调整请查看 scripts/init_db.py。
+
+### Windows 一键启动
+
+在项目根目录双击 `start_project.bat`，或在 PowerShell 执行：
+
+~~~powershell
+.\start_project.bat
+~~~
+
+该入口使用本地 SQLite 和 Local Runner，不会修改 `.env`；LLM/Embedding Key 为空时走离线能力，已配置时使用真实服务。启动时会先验证并刷新本项目的后端、两个 MCP 服务和 Revit Bridge；如果本项目的 Vite 已在 `:3000` 运行，会保留该前端进程和浏览器会话，不因后端改动而刷新前端。其他程序占用这些端口时会明确报错且不会被终止。数据库、日志、上传和任务产物统一位于 `data/runtime` 或被 Git 忽略的数据目录，不再污染项目根目录。首次需要重建知识库时可执行 `.\start_project.bat -SeedKnowledge`。
+
+## 前端角色
+
+| 角色 | 额外可见页面 |
 |---|---|
-| 数据层 | 8 张表：users/qa_sessions(+summary_version)/bid_reviews(状态机+超时)/purchase_orders/approval_records/negotiation_sessions/knowledge_chunks/knowledge_pending_queue |
-| 投标审查 | 后台任务（202 提交）+ 轮询状态机（processing→done/failed）+ 15 分钟超时兜底 + 列表接口 |
-| 知识问答 | 记忆节点（load/save_memory + 摘要压缩，每 10 轮触发）+ MemorySaver 多轮记忆 + 历史会话接口 |
-| 采购审批 | pending 待审批列表 + my-orders 我的订单 + 结果查询（人工审批 HitL） |
-| 供应商谈判 | 结构化五维报告生成（价格/技术/交付/风险/合作）+ SSE 流式接口 |
-| Orchestrator | Pipeline 每步独立 session_id 防串台 + 前序 structured 注入后序（{agent}_result 键）+ 失败保留成果 |
-| 前端 | 投标审查改为轮询渲染（提交→轮询→报告/风险/结论） |
+| `admin` | 项目知识库、任务时间线、审核中心 |
+| `reviewer` | 审核中心 |
+| 其他项目角色 | 不显示上述管理页面 |
 
-### 新增 API 一览
-- `POST /api/v1/bid-review/review`（202 后台）→ `GET /api/v1/bid-review/reviews/{id}`（轮询）→ `GET /api/v1/bid-review/reviews`（列表）
-- `GET /api/v1/procurement/pending`（待审批）、`GET /api/v1/procurement/my-orders`（我的订单）
-- `POST /api/v1/negotiation/chat/stream`（SSE 流式 + done 附报告）
-- `GET /api/v1/qa/sessions/{id}/history`（历史会话）
+普通业务入口固定为“BIM Agent”和“智能工作台（QA）”。工作台内保留问答、投标审查、采购审批和供应商谈判面板；业务会话、文件和审批仍分别隔离。旧投标/采购/谈判地址会进入工作台对应面板，BIM 请求仍跳转独立建模页面。管理员知识库、任务时间线和审核端保留角色权限。
 
-## 部署方式
+BIM 页面内的任务进度和 WallModel/Revit 审批是建模主链路的一部分，不受独立“任务时间线”管理页面隐藏影响。
 
-### 环境要求
-- Python 3.11+（项目虚拟环境，依赖见 requirements.txt）
-- Node.js 18+（前端）
-- 本地模型：`models/` 目录（BGE-M3 / Reranker / MiniLM；用 `MODELS_ROOT` 环境变量指定）
-- Docker（可选：PostgreSQL + Milvus 基础设施）
+## 配置
 
-### 双终端启动
-```bash
-# 终端 A：后端 :8000
-scripts\start_backend.bat        # 或 python -m uvicorn backend.main:app --port 8000
+项目只保留一个配置模板：[.env.example](.env.example)。常用项：
 
-# 终端 B：前端 :3000
-scripts\start_frontend.bat       # 或 cd frontend && npm run dev
-# 访问 http://localhost:3000
-```
-
-### 部署前检查
-```bash
-python scripts/verify_env.py      # 环境自检（依赖/模型/LLM key/数据库/知识库）
-python scripts/init_db.py         # 初始化数据库（SQLite 或 PostgreSQL）
-python scripts/seed_knowledge.py  # 灌知识库（本地嵌入或 Milvus）
-```
-
-### 生产部署
-- 前端生产构建：`cd frontend && npm run build`，产物由后端 StaticFiles 服务（单端口）
-- Docker 容器化：`docker compose up -d` 起 PostgreSQL+Milvus，Dockerfile 打包后端
-- 配置：复制 `.env.local.example` 为 `.env.local` 填写
-
-## Vue3 前端完成（✅ 已验证联通）
-
-前端已从单页 SPA 升级为 **Vue3 + Element Plus + Pinia + Vue Router** 完整工程（`frontend/`），对齐行业范式 第 9 章：
-
-| 页面 | 功能 |
+| 场景 | 配置项 |
 |---|---|
-| /login | 登录（JWT，鉴权守卫） |
-| /dashboard | 仪表盘 + LLM 调用统计 |
-| /qa | 智能对话（SSE 流式，RAG+真实 LLM） |
-| /bid-review | 投标审查（PDF 上传 + 轮询） |
-| /procurement | 采购审批（下单 + 批准/驳回） |
-| /negotiation | 供应商谈判（状态机多轮） |
-| /teacher | 教师端（待审批 + 知识待补队列） |
-| /history | 历史记录 |
+| 离线开发 | 保持 LLM_API_KEY 与 EMBEDDING_API_KEY 为空 |
+| 真实 LLM | LLM_API_KEY、LLM_BASE_URL、LLM_MODEL |
+| PostgreSQL / Milvus | DATABASE_URL、VECTOR_BACKEND、MILVUS_HOST、MILVUS_PORT |
+| RabbitMQ / S3 | TASK_QUEUE_BACKEND、RABBITMQ_URL、ARTIFACT_STORAGE_BACKEND、S3_* |
+| Revit Bridge | REVIT_BRIDGE_URL、REVIT_BRIDGE_EXECUTION_ENABLED、REVIT_BRIDGE_APPROVAL_SECRET、WALL_PIPELINE_REVIT_WRITE_TIMEOUT_SECONDS |
+| 多实例 | REDIS_URL、强随机 JWT_SECRET、生产 CORS_ORIGINS |
+| PDF/DWG / Revit | 墙体 YAML 配置、BIM_JSON_IN、REVIT_OUTPUT_DIR；DWG 配置 ODA_FILE_CONVERTER |
 
-### 启动方式（两个终端）
-```bash
-# 终端1：后端 :8000
-python/python.exe -m uvicorn backend.main:app --port 8000
+通用 PDF/DWG 墙体流水线的配置、六阶段 JSON 和审核命令见 [docs/WALL_PIPELINE.md](docs/WALL_PIPELINE.md)，输入模板见 [config/wall_pipeline.example.yaml](config/wall_pipeline.example.yaml)。
 
-# 终端2：前端 :3000
-cd frontend && npm install && npm run dev
-# 打开 http://localhost:3000，登录 admin/demo123
-```
+.env 仅由后端开发进程读取。Windows Revit 已启动后不会自动读取该文件：需将 BIM / Revit 两个交换目录配置为 Revit 宿主机环境变量，重启 Revit 后生效。
 
-### 验证
-- ✅ Vite proxy 联通后端（登录/SSE/查询全通）
-- ✅ SSE 流式经 proxy：44 token，回答"螺纹钢 3560 元/吨"（来源 [建材价格]）
+## Docker 基础设施
 
-## Vue3 前端（对齐行业范式 第9章）
+Compose 提供 PostgreSQL、RabbitMQ、Redis、Milvus、MinIO、后端/Worker 和可观测栈。先在 .env 设置强随机 JWT_SECRET，然后构建并启动：
 
-前端已从单页 SPA 升级为 **Vue3 + Element Plus + Pinia + Vue Router** 完整工程（`frontend/`）：
-- 登录页 / 仪表盘 / 智能对话（SSE 流式）/ 投标审查（PDF上传+轮询）/ 采购审批 / 供应商谈判 / 教师端（待审批+知识待补）/ 历史记录
-- Vite proxy 连后端 :8000，前端跑 :3000
-- JWT 鉴权守卫（未登录跳转 /login）
+~~~powershell
+docker build -t buildmate:models .
+docker compose up -d
+~~~
 
-启动：`cd frontend && npm install && npm run dev` → http://localhost:3000
+BIM 交换目录通过 data/runtime/revit 挂载进后端容器。Revit 仍须在安装了 Revit 与 pyRevit 的 Windows 宿主机运行，不能放入 Linux 容器。
 
-## PostgreSQL + Milvus 实连验证（已完成 ✅）
+## Revit Worker
 
-系统已有 PostgreSQL + Milvus 基础设施容器运行，demo 已实连：
+1. 在 .env 配置 BIM_JSON_IN 和 REVIT_OUTPUT_DIR 为 Windows 宿主机上的共享目录；若直接使用项目内演示目录，可设置 `BUILDMATE_PROJECT_ROOT` 为项目根目录。
+2. 将同样的两个变量设置为 Revit 进程的环境变量，重启 Revit。
+3. 运行 python scripts/sync_revit_ext.py，把 [workers/pyrevit](workers/pyrevit) 的主副本同步到 pyRevit 扩展目录。
+4. Revit MCP 源码位于 [workers/revit_mcp](workers/revit_mcp)，使用根目录 requirements.txt 即可调试。
 
-| 组件 | 容器 | 连接 |
-|---|---|---|
-| PostgreSQL | postgres (:5433) | ✅ 建 buildmate 库 + 8 表 + 用户 |
-| Milvus | milvus (:19531) | ✅ knowledge_domain 集合（course_id=buildmate 隔离） |
-| MinIO/etcd | Milvus 依赖 | ✅ healthy |
+写操作通过独立 Bridge：
 
-### 实连要点
-1. .env：`DATABASE_URL=postgresql+asyncpg://<user>:<password>@localhost:5433/buildmate`，`MILVUS_HOST=localhost`（口令用环境变量，勿提交真实凭据）
-2. Milvus schema 对齐标准 knowledge_domain（embedding 1024 维 + sparse_embedding 等必填字段），course_id=buildmate 隔离
-3. db/dialect.py 处理 SQLite/PG upsert 差异；migrations.py 跨方言查表
-4. Milvus 搜索需指定 anns_field=embedding（集合有 dense+sparse 双向量字段）
+~~~powershell
+.\.venv\Scripts\python -m uvicorn workers.revit_bridge.main:app --host 127.0.0.1 --port 8005
+~~~
 
-### 验证结果
-- Milvus 语义检索：螺纹钢 0.74 / 塔吊 0.74 / GB50010 0.67（真实 BGE-M3 向量）
-- 冒烟测试：10/10 ✅
-- 样本测试：39/39 (100%) ✅（加限流重试：真实 LLM 密集请求偶发 DeepSeek 402/限流）
+Bridge 默认 `validate-only`。启用真实写入前必须配置审批密钥，并由后端持久化 Review/Build 审批；不要把 8005 暴露到局域网或公网。
 
-## 双数据库自适应支持（PostgreSQL + Milvus 代码就绪）
+DXF 可直接处理；DWG 转换器是可选的 Windows 外部依赖，需通过 `ODA_FILE_CONVERTER` 显式配置。
 
-已完成的代码层改造（Docker 引擎启动后即生效）：
-1. backend/db/dialect.py：SQLite ↔ PostgreSQL 方言自适应，所有 upsert 自动选择合适语法
-2. backend/core/knowledge_base.py：Milvus 可选后端（配置 MILVUS_HOST 且可连接时使用）
-3. backend/config.py：新增 milvus_host/milvus_port 配置
-4. init_db.py：用户灌入方言自适应
+## 测试与质量检查
 
-启用方式（Docker 引擎可用时）：
-  docker compose up -d
-  # 在 .env 配置切换数据库：
-  #   DATABASE_URL=postgresql+asyncpg://buildmate:buildmate123@localhost:5433/buildmate
-  #   MILVUS_HOST=localhost  MILVUS_PORT=19531
-  python scripts/init_db.py
-  python scripts/seed_knowledge.py
-  python -m uvicorn backend.main:app --port 8000
+~~~powershell
+.\.venv\Scripts\python -m pytest -q --basetemp .pytest_tmp
+.\.venv\Scripts\python -m pip check
+docker compose config --quiet
+~~~
 
-注：当前沙箱环境 Docker 引擎不可用（com.docker.service Stopped，需管理员启动），
-PostgreSQL/Milvus 实连验证在正常环境进行。SQLite 模式已回归验证通过。
+通过数以当前 CI 输出为准，不在文档中维护容易失真的手工数字。测试临时目录与运行时产物均已被 Git 忽略；回归 fixture 不依赖个人 `data/runtime` 文件。
 
-## RAG 闭环增强记录（第四轮）
+## 当前文档
 
-| # | 增强项 | 实现 |
-|---|---|---|
-| 1 | **知识待补闭环** | QA 图加 `enqueue_pending_node`：低置信度问题自动写入 `knowledge_pending_queue`；新增 `GET /api/v1/knowledge/pending`（教师查看）+ `POST /api/v1/knowledge/pending/{id}/resolve`（标记已解决） |
-| 2 | **Web 搜索兜底** | generate_node 低置信度分支尝试调用 web_search MCP（:8002）→ 有结果注入并标 `web_augmented`（附 🌐 来源）；无结果/服务不可用优雅降级 `llm_direct` |
-
-### 闭环演示（实测）
-1. 问"女儿墙施工规范"（知识库无）→ 自动入队（conf 0.1347）
-2. `GET /knowledge/pending` 教师可见 → `POST /resolve` 标记 → pending 归零
-3. Web 搜索不可用时降级 llm_direct，真实模型准确引用 GB 50345-2012 等规范
-
-> 注：DuckDuckGo 搜索在沙箱环境因证书存储权限受限无法联网验证；代码就绪，部署到正常环境即生效。
-
-## 生产化补齐记录（第三轮）
-
-| # | 补齐项 | 实现 |
-|---|---|---|
-| 1 | **单元测试体系** | pytest + pytest-asyncio，13 个测试覆盖四个 Agent 核心节点（QA 检索/生成/分类、投标解析/格式化、采购规则/HitL、谈判状态机），Mock LLM 不依赖真实 API |
-| 2 | **可观测性** | `backend/core/observability.py`：LLM 调用追踪（耗时/字符/估算成本，SQLite 存储），`GET /api/v1/observability/stats` 查询；所有 `get_llm()` 自动追踪 |
-| 3 | **Docker Compose** | `docker-compose.yml`：PostgreSQL + Milvus（etcd/MinIO 内部），端口 5433/19531；`.env.production.example` 切库配置 |
-| 4 | **前端增强** | 自动登录 + 首屏加载历史（完整 Vue3 重写暂缓：现有 SPA 已覆盖 4 功能页，重写有回归风险） |
-
-### 测试矩阵
-- 单元测试：`pytest tests/ -v` → **13/13**
-- 冒烟测试：`python tests/test_smoke.py` → **10/10**
-- 样本测试：`python tests/test_samples.py` → **39/39 (100%)**
-
-### 观测示例
-一次问答 = 3 次 LLM 调用（路由+策略+生成），`GET /api/v1/observability/stats` 返回：
-`{"calls": 3, "total_ms": 2392, "est_cost_usd": 0.0007}`
-
-## 差距补齐记录（第二轮：对齐行业范式 完整框架）
-
-| # | 补齐项 | 实现 |
-|---|---|---|
-| 1 | **Reranker 精排** | `backend/core/reranker.py`：加载 bge-reranker-large（CPU），Hybrid 召回 8 条 → 精排 top3 + 置信度（0.75 阈值） |
-| 2 | **意图分类器** | `backend/core/query_classifier.py`：MiniLM 微调版（general/specialized）+ 规则快通道三层分类 |
-| 3 | **MCP 工具层** | `backend/mcp/`：知识库检索 + 联网搜索两个 FastMCP Server（独立进程 :8001/:8002）+ client.py JSON-RPC 调用 |
-| 4 | **PDF 解析** | `backend/core/pdf_parser.py`：PyMuPDF 双栏解析 + `POST /bid-review/upload` 上传接口 |
-| 5 | **数据库迁移** | `backend/db/migrations.py`：幂等补丁（SQLite 兼容：先查列再 ALTER）+ lifespan 启动执行 |
-
-### 启动时本地模型预热（lifespan）
-并行加载三个本地模型：分类器（~12s）+ BGE-M3 嵌入（~3s）+ Reranker（~7s），首请求不再卡顿。
-
-### MCP 独立进程启动
-```bash
-python/python.exe backend/mcp/knowledge_base_server.py  # :8001
-python/python.exe backend/mcp/web_search_server.py       # :8002
-```
-
-## 已知修复记录
-
-- **SSE token 流**：Mock 模式下 MockChatModel 原本不产生流式 chunk，导致前端停在"思考中"。已实现 `_stream()` 方法（按 4 字符切块 yield AIMessageChunk）+ 统一入口兜底（generate 结束时无 token 则推送完整答案）。冒烟测试确认 token 流 = True。
-- **前端 SSE 解析 CRLF**：sse-starlette 用 CRLF（\r\n\r\n）分帧，旧前端用 `split('\n\n')` 切不开导致页面停在"思考中"。已改为逐行解析（兼容 CRLF/LF）。
-- **检索质量**：知识库从 5 个大块细分为 14 个二级标题块（每块自带标题上下文）；塔吊租赁从"施工规范"归位到"机械租赁"；检索加入关键词域加权（价格/规范/招标/施工方案/租赁/采购），mock 模式命中准确率大幅提升。
-- **混合检索（Hybrid）**：对标行业范式 WeightedRanker(0.7, 0.3)——Dense 路（字符哈希向量余弦，语义）+ Sparse 路（BM25，字面词命中，IDF 自动压低"规范/施工"等高频泛词），融合分 = 0.7×dense + 0.3×sparse_ratio。另加**共享实体词门槛**：查询与 chunk 必须共享含非功能字的 3-gram 专名（螺纹钢/塔吊/深基坑…）才保留 sparse 贡献，否则归零——彻底解决"女儿墙施工规范"（库内无此内容）被"施工/规范"泛词抬分误答的问题。
-- **检索加权改为实体词词典**：原"领域词表加权"会把查询中的通用词（如"规范"）抬升所有规范类 chunk，导致"女儿墙施工规范"（知识库无此内容）误答地基基础规范。现改为仅当【具体实体词】（螺纹钢/塔吊/GB50010/女儿墙等）在查询与 chunk 中都出现才加权，配合阈值 0.6 实现准确判定：相关命中 0.9~1.5（RAG），无关 0.3~0.5（诚实回复"暂无相关内容"）。
-- **置信度阈值 0.6**：检索 top1 得分 ≥0.6 才走 RAG 回答（相关命中实测 ≥0.95，无关 ≤0.28），知识库没有的问题会诚实回复"暂无相关内容"而非硬答不相关结果。
-- **Mock 回答与检索一致**：Mock 模式的问答回复原本硬编码为"螺纹钢价格"，导致问规范也答价格。已改为从 prompt 中提取【知识库参考内容】原样回显（问规范回规范、问价格回价格），并保留参考来源标注。
-- **功能页面**：前端从单页聊天升级为多视图 SPA（智能对话/投标审查/采购审批/供应商谈判），跳转链接改为 hash 路由（#/bid-review 等），引导卡片可直达对应功能页。
-
-
-- **SSE token 流**：Mock 模式下 MockChatModel 原本不产生流式 chunk，导致前端停在"思考中"。已实现 `_stream()` 方法（按 4 字符切块 yield AIMessageChunk）+ 统一入口兜底（generate 结束时无 token 则推送完整答案）。冒烟测试确认 token 流 = True。
-
-## 与行业标杆实现的差异（demo 降级点）
-
-| 组件 | 行业标杆实现 | 本 Demo |
-|---|---|---|
-| 数据库 | PostgreSQL + asyncpg | SQLite + aiosqlite（改 DATABASE_URL 即可切回） |
-| 向量库 | Milvus + BGE-M3 | 本地哈希向量（改 `knowledge_base.py` 可切真实嵌入） |
-| 意图分类 | MiniLM-L6-v2 本地模型 | 规则 + LLM 路由（`_llm_route`） |
-| 精排 | BGE-Reranker | 无（demo 用召回分数直排） |
-| 记忆 | MemorySaver + qa_sessions 表 | MemorySaver（同构） |
-| 观测 | Langfuse | 结构化日志 |
+- [架构总览](docs/ARCHITECTURE.md)
+- [当前可运行基线](docs/CURRENT_STATUS.md)
+- [优化记录](docs/OPTIMIZATION.md)
+- [当前状态](docs/CURRENT_STATUS.md)
+- [产品需求](docs/PRD.md)
+- [全栈总体设计](docs/DESIGN.md)
+- [数据库设计](docs/DATABASE_DESIGN.md)
+- [UI / UE 设计规范](docs/UI_UX_DESIGN.md)
+- [19 个功能模块设计](docs/design/modules)
+- [公共合同](docs/contracts/README.md)
+- [PDF/DWG → Revit 当前操作与验收合同](docs/WALL_PIPELINE.md)
+- [BIM 国标建模标准（可执行 profile）](docs/BIM_MODELING_STANDARD.md)

@@ -21,6 +21,7 @@ _AGENT_MODEL_ROUTING: dict[str, str] = {
     "negotiation": "deepseek-chat",
     "intent": "deepseek-chat",
     "summarize": "deepseek-chat",
+    "drawing2bim": "deepseek-chat",   # 图纸视觉通道（drawing_vision.py）
 }
 
 
@@ -41,6 +42,10 @@ def register_llm_provider(name: str, factory: ProviderFactory) -> None:
 
 def _openai_compatible_factory(agent_type: str, temperature: float, streaming: bool) -> BaseChatModel:
     settings = get_settings()
+    # ChatOpenAI otherwise inherits an effectively unbounded network wait.  A
+    # bounded client timeout lets the caller surface a useful fallback instead
+    # of leaving the browser's composer spinning forever.
+    request_timeout = getattr(settings, "llm_request_timeout_seconds", 30.0)
     return ChatOpenAI(
         model=settings.llm_model,
         api_key=settings.llm_api_key,
@@ -48,6 +53,8 @@ def _openai_compatible_factory(agent_type: str, temperature: float, streaming: b
         temperature=temperature,
         streaming=streaming,
         max_retries=0,
+        timeout=request_timeout,
+        stream_chunk_timeout=request_timeout,
     )
 
 
@@ -135,15 +142,6 @@ class MockChatModel(BaseChatModel):
                                "suggestion": "建议人工复核后放行" if not amount_ok else "可放行",
                                "verdict": "pass" if amount_ok else "review",
                                "reason": "规则引擎判定"}, ensure_ascii=False)
-        # ⑥b BIM 模型合规审查（bim_review.py）
-        if "BIM 模型合规审查专家" in text:
-            return json.dumps({
-                "risk_level": "medium",
-                "observations": ["（Mock）模型构件信息较简单，建议补充属性定义与空间划分"],
-                "suggestions": ["补充材料/尺寸属性集", "定义 IFCSPACE 空间", "构件统一命名规范"],
-                "verdict": "review",
-                "summary": "（Mock）BIM 模型基本可读，信息深度有待补充",
-            }, ensure_ascii=False)
         # ⑦ 审批文案
         if "最终批复" in text or "审批结果说明" in text:
             return "采购单已完成审批流程，AI 双轨审核结论已确认，最终决定已记录并留痕。"

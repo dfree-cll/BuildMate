@@ -23,10 +23,13 @@ from backend.core.logger import get_logger
 
 logger = get_logger(__name__)
 
-# SQLite 模式：绝对路径锚定项目根（旧相对路径依赖 CWD，换目录启动会指向另一个库文件）
-_CHECKPOINTS_DB = str(Path(__file__).resolve().parent.parent.parent / "checkpoints.db")
+# SQLite 检查点是运行时状态，统一收敛到 data/runtime，避免污染项目根目录。
+_CHECKPOINTS_DB = str(
+    Path(__file__).resolve().parent.parent.parent
+    / "data" / "runtime" / "db" / "checkpoints.db"
+)
 
-_SAVER_AGENTS = ("qa", "bid_review", "procurement", "negotiation", "default")
+_SAVER_AGENTS = ("qa", "bid_review", "procurement", "negotiation", "drawing2bim", "default")
 
 # SQLite 模式：每 Agent 独立 saver（分散文件锁竞争）；PG 模式：单一共享 saver + 连接池
 _memory_savers: dict[str, AsyncSqliteSaver] = {}
@@ -46,19 +49,26 @@ async def init_memory_savers() -> None:
     global _pg_pool, _pg_saver
     from backend.db.dialect import is_postgres
     if is_postgres():
-        from psycopg_pool import AsyncConnectionPool
-        from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-        _pg_pool = AsyncConnectionPool(
-            conninfo=_pg_conninfo(),
-            kwargs={"autocommit": True, "prepare_threshold": 0},
-            min_size=1, max_size=8, open=False,
-        )
-        await _pg_pool.open()
-        _pg_saver = AsyncPostgresSaver(_pg_pool)
-        await _pg_saver.setup()
-        logger.info("memory.savers_initialized", count=1, backend="postgres", shared=True)
-        return
+        try:
+            from psycopg_pool import AsyncConnectionPool
+            from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+            _pg_pool = AsyncConnectionPool(
+                conninfo=_pg_conninfo(),
+                kwargs={"autocommit": True, "prepare_threshold": 0},
+                min_size=1, max_size=8, open=False,
+            )
+            await _pg_pool.open()
+            _pg_saver = AsyncPostgresSaver(_pg_pool)
+            await _pg_saver.setup()
+            logger.info("memory.savers_initialized", count=1, backend="postgres", shared=True)
+            return
+        except Exception as ex:
+            if _pg_pool is not None:
+                await _pg_pool.close()
+            _pg_pool, _pg_saver = None, None
+            raise RuntimeError("PostgreSQL checkpoint initialization failed; refusing local memory fallback") from ex
     import aiosqlite
+    Path(_CHECKPOINTS_DB).parent.mkdir(parents=True, exist_ok=True)
     for agent in _SAVER_AGENTS:
         if agent not in _memory_savers:
             conn = await aiosqlite.connect(_CHECKPOINTS_DB)
@@ -104,7 +114,14 @@ def build_thread_id(user_id: str, session_id: str) -> str:
     return f"user_{user_id}_session_{session_id}"
 
 
-def build_config(user_id: str, session_id: str) -> dict:
+def build_config(user_id: str, session_id: str, *, tenant_id: str | None = None,
+                 project_id: str | None = None, agent: str | None = None) -> dict:
+    if tenant_id is not None and agent is not None:
+        import hashlib
+        import json
+        key = hashlib.sha256(json.dumps([tenant_id, project_id, user_id, agent, session_id]).encode()).hexdigest()
+        return {"configurable": {"thread_id": "scoped_" + key}}
+    # Kept for retired migration scripts; public entrypoints use scoped keys.
     return {"configurable": {"thread_id": build_thread_id(user_id, session_id)}}
 
 # ═══════════════ 记忆控制策略═══════════════

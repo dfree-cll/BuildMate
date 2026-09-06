@@ -117,10 +117,10 @@ async def test_refresh_rereads_role_from_db(api):
     j = (await _login(api, "promoted01", "secret123")).json()
     assert j["role"] == "buyer"
     async with engine.begin() as conn:
-        await conn.execute(text("UPDATE users SET role = 'teacher' WHERE id = 'u-auth6'"))
+        await conn.execute(text("UPDATE users SET role = 'reviewer' WHERE id = 'u-auth6'"))
     r = await api.post(f"{BASE}/auth/refresh", json={"refresh_token": j["refresh_token"]})
     assert r.status_code == 200
-    assert r.json()["role"] == "teacher"
+    assert r.json()["role"] == "reviewer"
 
 
 async def test_logout_revokes_db_user_all_tokens(api):

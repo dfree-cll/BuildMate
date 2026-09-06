@@ -32,6 +32,7 @@ RUN pip install --no-cache-dir --retries 5 --timeout 60 \
 # 应用代码
 COPY backend/ ./backend/
 COPY scripts/ ./scripts/
+COPY workers/ ./workers/
 COPY data/ ./data/
 # Alembic 迁移（启动时自动 upgrade head；漏拷会导致应用启动失败）
 COPY migrations/ ./migrations/

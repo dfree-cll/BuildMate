@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 
 const routes = [
   { path: '/login', name: 'Login', component: () => import('../views/LoginView.vue') },
@@ -8,12 +9,15 @@ const routes = [
     children: [
       { path: '', redirect: '/dashboard' },
       { path: 'dashboard', name: 'Dashboard', component: () => import('../views/DashboardView.vue') },
+      { path: 'knowledge', name: 'Knowledge', component: () => import('../views/KnowledgeView.vue'), meta: { roles: ['admin'] } },
+      { path: 'tasks', name: 'Tasks', component: () => import('../views/TaskTimelineView.vue'), meta: { roles: ['admin'] } },
       { path: 'qa', name: 'QA', component: () => import('../views/QAChatView.vue') },
-      { path: 'bid-review', name: 'BidReview', component: () => import('../views/BidReviewView.vue') },
+      // Legacy deep links remain safe, but all non-BIM business actions start in QA.
+      { path: 'bid-review', redirect: { path: '/qa', query: { capability: 'bid_review' } } },
       { path: 'bim', name: 'BimReview', component: () => import('../views/BimReviewView.vue') },
-      { path: 'procurement', name: 'Procurement', component: () => import('../views/ProcurementView.vue') },
-      { path: 'negotiation', name: 'Negotiation', component: () => import('../views/NegotiationView.vue') },
-      { path: 'teacher', name: 'Teacher', component: () => import('../views/TeacherView.vue') },
+      { path: 'procurement', redirect: { path: '/qa', query: { capability: 'procurement' } } },
+      { path: 'negotiation', redirect: { path: '/qa', query: { capability: 'negotiation' } } },
+      { path: 'review', name: 'Review', component: () => import('../views/ReviewView.vue'), meta: { roles: ['admin', 'reviewer'] } },
       { path: 'history', name: 'History', component: () => import('../views/HistoryView.vue') },
     ],
   },
@@ -28,6 +32,9 @@ router.beforeEach((to) => {
   const token = localStorage.getItem('bm_token')
   if (to.path !== '/login' && !token) return '/login'
   if (to.path === '/login' && token) return '/dashboard'
+  const roles = to.meta.roles as string[] | undefined
+  const role = useAuthStore().user?.role
+  if (roles && (!role || !roles.includes(role))) return '/dashboard'
   return true
 })
 

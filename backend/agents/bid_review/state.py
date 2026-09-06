@@ -25,15 +25,20 @@ class BidReviewStructured(BaseModel):
     bid_documents: list[str] = Field(default_factory=list)
 
 
-class BidReviewState(TypedDict):
+from backend.application.agent_memory import MemoryState
+
+
+class BidReviewState(MemoryState):
+    review_id: str
     messages: Annotated[list[BaseMessage], add_messages]
     user_id: str
     tenant_id: str
-    review_id: str
-    doc_text: str                        # 解析出的投标文件文本
+    doc_text: str                        # 解析出的投标文件文本（多文件时含文件分隔标记）
+    documents: Optional[list[dict]]      # 多文件结构化输入 [{filename, raw_text}]（归类/喂料用）
     structured: Optional[dict]           # 结构化提取
     dimension_scores: list[dict]         # 四维评分
     weighted_score: float
+    disqualify_risks: list[dict]         # 废标规则轨命中（确定性检测）
     issues: list[dict]                   # 风险问题
     summary: Optional[dict]              # 整体评价
     answer: str                          # 最终汇总输出

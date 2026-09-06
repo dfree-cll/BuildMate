@@ -5,10 +5,12 @@ load_memory → classify_query → (PRECISE/VAGUE/BROAD → retrieve | GENERAL �
 from langgraph.graph import StateGraph, START, END
 from backend.agents.qa.state import QAState
 from backend.agents.qa.nodes import (
-    classify_query_node, retrieve_node, generate_node, save_memory_node,
-    load_memory_node, enqueue_pending_node, real_price_node, _is_price_query,
+    classify_query_node, retrieve_node, generate_node,
+    enqueue_pending_node, real_price_node, clarify_node,
+    _is_price_query, _has_price_intent, _extract_material,
 )
 from backend.core.memory import get_memory_saver
+from backend.application.agent_memory import memory_nodes
 
 
 def _route_by_query_type(state: QAState) -> str:
@@ -16,22 +18,26 @@ def _route_by_query_type(state: QAState) -> str:
 
 
 def _route_after_classify(state: QAState) -> str:
-    """价格意图优先于策略分类 → 真实行情直答；其余按策略正常检索"""
+    """价格意图优先于策略分类：完整价格→真实行情直答；缺材料/城市→澄清；其余按策略检索"""
     query = state.get("original_query", "")
     if _is_price_query(query):
         return "real_price"
+    if _has_price_intent(query) and not _extract_material(query):
+        return "clarify"
     return state.get("query_type", "PRECISE").upper()
 
 
 def build_qa_graph():
     builder = StateGraph(QAState)
-    builder.add_node("load_memory", load_memory_node)
+    load_memory, save_memory = memory_nodes("qa")
+    builder.add_node("load_memory", load_memory)
     builder.add_node("classify_query", classify_query_node)
     builder.add_node("real_price", real_price_node)
+    builder.add_node("clarify", clarify_node)
     builder.add_node("retrieve", retrieve_node)
     builder.add_node("generate", generate_node)
     builder.add_node("enqueue_pending", enqueue_pending_node)
-    builder.add_node("save_memory", save_memory_node)
+    builder.add_node("save_memory", save_memory)
 
     builder.add_edge(START, "load_memory")
     builder.add_edge("load_memory", "classify_query")
@@ -40,7 +46,7 @@ def build_qa_graph():
         _route_after_classify,
         {
             "PRECISE": "retrieve", "VAGUE": "retrieve", "BROAD": "retrieve",
-            "GENERAL": "generate", "real_price": "real_price",
+            "GENERAL": "generate", "real_price": "real_price", "clarify": "clarify",
         },
     )
     # real_price 命中（answer_mode=real_price）→ 答案已生成，跳过 generate 直接收尾；
@@ -52,6 +58,8 @@ def build_qa_graph():
     )
     builder.add_edge("retrieve", "generate")
     builder.add_edge("generate", "enqueue_pending")
+    # 澄清：答案已生成且不算低置信度，跳过 enqueue_pending 直接收尾
+    builder.add_edge("clarify", "save_memory")
     builder.add_edge("enqueue_pending", "save_memory")
     builder.add_edge("save_memory", END)
 
