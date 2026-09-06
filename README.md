@@ -38,7 +38,7 @@ BuildMateDemo/
 ├─ data/                     知识、已批准证据、Revit 基准与运行时数据
 ├─ migrations/               Alembic 数据库迁移
 ├─ docs/                     架构、协议和部署文档
-├─ requirements.txt          唯一 Python 依赖清单（运行、测试、Worker 共用）
+├─ requirements.txt          唯一 Python 运行依赖清单（后端与 Worker 共用）
 └─ .env.example              唯一环境变量模板
 ~~~
 
@@ -164,7 +164,7 @@ npm run build
 - [全栈总体设计](docs/DESIGN.md)
 - [数据库设计](docs/DATABASE_DESIGN.md)
 - [UI / UE 设计规范](docs/UI_UX_DESIGN.md)
-- [19 个功能模块设计](docs/design/modules)
+- [功能模块设计](docs/design/modules)
 - [公共合同](docs/contracts/README.md)
 - [PDF/DWG → Revit 当前操作与验收合同](docs/WALL_PIPELINE.md)
 - [BIM 国标建模标准（可执行 profile）](docs/BIM_MODELING_STANDARD.md)
