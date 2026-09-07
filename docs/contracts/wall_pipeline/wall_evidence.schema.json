@@ -1,0 +1,222 @@
+{
+  "$defs": {
+    "EvidenceSourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "source_file_id": {
+          "title": "Source File Id",
+          "type": "string"
+        },
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        },
+        "layer": {
+          "default": "",
+          "title": "Layer",
+          "type": "string"
+        },
+        "frame_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Id"
+        }
+      },
+      "required": [
+        "source_file_id",
+        "entity_id",
+        "locator"
+      ],
+      "title": "EvidenceSourceRef",
+      "type": "object"
+    },
+    "WallEvidenceItem": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "method": {
+          "enum": [
+            "parallel_vector_faces",
+            "closed_vector_strip",
+            "single_semantic_line"
+          ],
+          "title": "Method",
+          "type": "string"
+        },
+        "centerline_m": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            }
+          ],
+          "title": "Centerline M",
+          "type": "array"
+        },
+        "thickness_m": {
+          "exclusiveMinimum": 0,
+          "title": "Thickness M",
+          "type": "number"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/EvidenceSourceRef"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "transform_ref": {
+          "default": "source_to_project_local_m",
+          "title": "Transform Ref",
+          "type": "string"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "method",
+        "centerline_m",
+        "thickness_m",
+        "source_refs",
+        "confidence"
+      ],
+      "title": "WallEvidenceItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "buildmate.wall-evidence/1.0",
+      "default": "buildmate.wall-evidence/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "artifact_type": {
+      "const": "wall_evidence",
+      "default": "wall_evidence",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "tenant_id": {
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "project_id": {
+      "title": "Project Id",
+      "type": "string"
+    },
+    "source_entities_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Source Entities Sha256",
+      "type": "string"
+    },
+    "units": {
+      "const": "m",
+      "default": "m",
+      "title": "Units",
+      "type": "string"
+    },
+    "transform_chain": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Transform Chain",
+      "type": "array"
+    },
+    "items": {
+      "items": {
+        "$ref": "#/$defs/WallEvidenceItem"
+      },
+      "title": "Items",
+      "type": "array"
+    },
+    "diagnostics": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "project_id",
+    "source_entities_sha256",
+    "transform_chain",
+    "items"
+  ],
+  "title": "WallEvidence",
+  "type": "object"
+}

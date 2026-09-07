@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "SourceEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "entity_id": {
+          "title": "Entity Id",
+          "type": "string"
+        },
+        "source_file_id": {
+          "title": "Source File Id",
+          "type": "string"
+        },
+        "page_no": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page No"
+        },
+        "kind": {
+          "enum": [
+            "line",
+            "polyline",
+            "hatch_boundary",
+            "mline",
+            "text"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "layer": {
+          "default": "",
+          "title": "Layer",
+          "type": "string"
+        },
+        "geometry": {
+          "additionalProperties": true,
+          "title": "Geometry",
+          "type": "object"
+        },
+        "style": {
+          "additionalProperties": true,
+          "title": "Style",
+          "type": "object"
+        },
+        "locator": {
+          "title": "Locator",
+          "type": "string"
+        },
+        "frame_id": {
+          "default": "",
+          "title": "Frame Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "entity_id",
+        "source_file_id",
+        "kind",
+        "geometry",
+        "locator"
+      ],
+      "title": "SourceEntity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "buildmate.source-entities/1.0",
+      "default": "buildmate.source-entities/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "artifact_type": {
+      "const": "source_entities",
+      "default": "source_entities",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "tenant_id": {
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "project_id": {
+      "title": "Project Id",
+      "type": "string"
+    },
+    "manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Manifest Sha256",
+      "type": "string"
+    },
+    "entities": {
+      "items": {
+        "$ref": "#/$defs/SourceEntity"
+      },
+      "title": "Entities",
+      "type": "array"
+    },
+    "source_units": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Source Units",
+      "type": "object"
+    },
+    "diagnostics": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "project_id",
+    "manifest_sha256",
+    "entities",
+    "source_units"
+  ],
+  "title": "SourceEntities",
+  "type": "object"
+}

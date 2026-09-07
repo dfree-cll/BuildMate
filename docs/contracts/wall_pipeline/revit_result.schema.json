@@ -1,0 +1,174 @@
+{
+  "$defs": {
+    "ApprovalRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "approved",
+            "rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "decided_at": {
+          "format": "date-time",
+          "title": "Decided At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "actor_id",
+        "reason"
+      ],
+      "title": "ApprovalRecord",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "buildmate.revit-result/1.0",
+      "default": "buildmate.revit-result/1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "artifact_type": {
+      "const": "revit_result",
+      "default": "revit_result",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "tenant_id": {
+      "title": "Tenant Id",
+      "type": "string"
+    },
+    "project_id": {
+      "title": "Project Id",
+      "type": "string"
+    },
+    "wall_model_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Wall Model Sha256",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "pending_approval",
+        "ready_for_dry_run",
+        "dry_run_passed",
+        "write_approved",
+        "succeeded",
+        "failed",
+        "rolled_back"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "transaction_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Transaction Id"
+    },
+    "created_element_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Created Element Ids",
+      "type": "array"
+    },
+    "created_column_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Created Column Ids",
+      "type": "array"
+    },
+    "created_beam_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Created Beam Ids",
+      "type": "array"
+    },
+    "readback": {
+      "additionalProperties": true,
+      "title": "Readback",
+      "type": "object"
+    },
+    "actual_view_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Actual View Path"
+    },
+    "actual_view_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Actual View Sha256"
+    },
+    "approval": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ApprovalRecord"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "errors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "tenant_id",
+    "project_id",
+    "wall_model_sha256",
+    "status"
+  ],
+  "title": "RevitResult",
+  "type": "object"
+}

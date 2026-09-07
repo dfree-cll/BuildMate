@@ -1,0 +1,14 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('ViewDefinition [CoordinationView]'),'2;1');
+FILE_NAME('demo_wall.ifc','2026-08-16T00:00:00',('Demo'),('Demo'),'','BuildMate','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCPROJECT('1',$,'Demo Project',$,$,$,$,$,$);
+#2=IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.);
+#10=IFCWALL('w1',$,'Õ‚«Ω-A',$,$,$,$,$,$);
+#11=IFCPROPERTYSET('ps1',$,'Pset_WallCommon',$,$,(#12));
+#12=IFCPROPERTYSINGLEVALUE('IsExternal',$,$,IFCBOOLEAN(.T.),$);
+ENDSEC;
+END-ISO-10303-21;

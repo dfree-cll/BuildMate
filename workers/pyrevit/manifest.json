@@ -1,0 +1,11 @@
+{
+  "schema_version": "buildmate.pyrevit/1",
+  "revit_versions": ["2020"],
+  "encoding": "utf-8",
+  "entrypoint": {
+    "source": "json2rvt_script.py",
+    "target": "script.py"
+  },
+  "support_files": ["wall_model_contract.py"],
+  "delivery_contract": "buildmate.wall-model/1.0"
+}
