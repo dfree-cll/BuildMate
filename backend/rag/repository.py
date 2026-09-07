@@ -30,7 +30,8 @@ class RAGRepository:
                        created_at, updated_at, version
                 FROM knowledge_documents
                 WHERE tenant_id=:tenant_id
-                  AND ((:project_id IS NULL AND project_id IS NULL) OR project_id=:project_id)
+                  AND ((CAST(:project_id AS TEXT) IS NULL AND project_id IS NULL)
+                       OR project_id=CAST(:project_id AS TEXT))
                   AND content_hash=:content_hash
                   AND parser_version=:parser_version
                   AND chunking_version=:chunking_version
@@ -238,8 +239,8 @@ class RAGRepository:
                   -- A missing project context means a tenant-scoped run, not
                   -- "any project".  Never let a caller omit project_id to
                   -- read another project's retrieval audit.
-                  AND ((:project_id IS NULL AND project_id IS NULL)
-                       OR project_id=:project_id)
+                  AND ((CAST(:project_id AS TEXT) IS NULL AND project_id IS NULL)
+                       OR project_id=CAST(:project_id AS TEXT))
             """), {
                 "id": run_id,
                 "tenant_id": context.tenant_id,

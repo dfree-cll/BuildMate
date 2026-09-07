@@ -1,6 +1,6 @@
-# BuildMate Demo 生产基础设施（对齐行业范式 3.1 docker-compose）
+# BuildMate Docker 部署：后端、任务与基础服务
 # 启动：docker compose up -d
-# 说明：demo 默认用 SQLite 可直接运行；此文件供生产/性能测试启用 PostgreSQL + Milvus
+# 本地开发可使用 SQLite；容器部署使用 PostgreSQL，Milvus 检索需单独配置嵌入模型。
 
 services:
   # ── PostgreSQL 业务数据库（对外 5434，避开本机 5432）──
@@ -154,6 +154,13 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com/v1}
       LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.siliconflow.cn/v1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-m3}
+      VECTOR_BACKEND: ${VECTOR_BACKEND:-local}
+      RAG_LOCAL_MODELS_ENABLED: ${RAG_LOCAL_MODELS_ENABLED:-false}
+      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-false}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 未设置：请在环境或项目 .env 提供强随机密钥}
       MODELS_ROOT: /models
       BIM_JSON_IN: /app/data/runtime/revit/json_in
@@ -164,7 +171,7 @@ services:
       # 与 Windows Revit 宿主机共享的建模输入/输出目录
       - ./data/runtime/revit:/app/data/runtime/revit
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -226,6 +233,15 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com/v1}
       LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-https://api.siliconflow.cn/v1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-BAAI/bge-m3}
+      VECTOR_BACKEND: ${VECTOR_BACKEND:-local}
+      MILVUS_HOST: milvus
+      MILVUS_PORT: 19530
+      RAG_LOCAL_MODELS_ENABLED: ${RAG_LOCAL_MODELS_ENABLED:-false}
+      RAG_RERANKER_ENABLED: ${RAG_RERANKER_ENABLED:-false}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET 未设置}
       MODELS_ROOT: /models
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317

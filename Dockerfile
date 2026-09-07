@@ -7,7 +7,7 @@
 FROM node:20-slim AS frontend-build
 WORKDIR /frontend
 COPY frontend/package*.json ./
-RUN npm ci --registry=https://registry.npmmirror.com || npm install --registry=https://registry.npmmirror.com
+RUN npm ci --registry=https://registry.npmmirror.com
 COPY frontend/ ./
 RUN npm run build
 
@@ -18,7 +18,7 @@ WORKDIR /app
 
 # 系统依赖
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates \
+    curl ca-certificates libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 依赖（默认 PyPI；加重试/超时，抗网络抖动）
@@ -26,11 +26,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # nvidia 依赖），容器只做 CPU 推理纯属浪费；requirements 里的 torch==2.5.1 随后视为已满足
 COPY requirements.txt .
 RUN pip install --no-cache-dir --retries 5 --timeout 60 \
-        --index-url https://download.pytorch.org/whl/cpu torch==2.5.1 \
+        --index-url https://download.pytorch.org/whl/cpu \
+        torch==2.5.1 torchvision==0.20.1 \
  && pip install --no-cache-dir --retries 5 --timeout 60 -r requirements.txt
 
 # 应用代码
 COPY backend/ ./backend/
+COPY config/ ./config/
 COPY scripts/ ./scripts/
 COPY workers/ ./workers/
 COPY data/ ./data/

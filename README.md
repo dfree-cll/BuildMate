@@ -121,7 +121,15 @@ Compose 提供 PostgreSQL、RabbitMQ、Redis、Milvus、MinIO、后端/Worker �
 ~~~powershell
 docker build -t buildmate:models .
 docker compose up -d
+# 首次启动后导入随项目提供的知识文档；重复执行不会重复入库。
+docker compose exec backend python scripts/seed_knowledge.py
 ~~~
+
+访问 <http://localhost:8000>。如果本机后端已占用该端口，可在 `.env` 设置 `BACKEND_PORT=8001` 后访问对应端口。页面与 API 由同一个容器提供，刷新 `/qa` 等页面可正常加载。
+
+未配置嵌入服务或本地模型时，使用默认 `VECTOR_BACKEND=local`。启用 Milvus 检索前，需要提供与索引维度匹配的嵌入模型；当前 Milvus 索引使用 1024 维，内置哈希向量不适用。`LLM_API_KEY` 留空时使用离线问答，填入后才会调用真实模型。模型设置同时传入后端与任务 Worker。
+
+若拉取基础镜像时镜像加速地址返回 401，请先修正 Docker Desktop 的镜像加速配置；也可从官方 `registry-1.docker.io/library/` 拉取相应镜像并标记为 Dockerfile 使用的名称后重试构建。
 
 BIM 交换目录通过 data/runtime/revit 挂载进后端容器。Revit 仍须在安装了 Revit 与 pyRevit 的 Windows 宿主机运行，不能放入 Linux 容器。
 

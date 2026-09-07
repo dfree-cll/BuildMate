@@ -37,29 +37,40 @@ _pg_pool = None            # psycopg AsyncConnectionPool
 _pg_saver = None           # AsyncPostgresSaver（共享）
 
 
-def _pg_conninfo() -> str:
+def _pg_conninfo(url: str | None = None) -> str:
     """DATABASE_URL（sqlalchemy 形式）→ psycopg conninfo：postgresql+asyncpg:// → postgresql://"""
     from backend.config import get_settings
-    url = get_settings().database_url
+    url = url or get_settings().database_url
     return url.replace("postgresql+asyncpg://", "postgresql://", 1)
 
 
-async def init_memory_savers() -> None:
+async def init_memory_savers(*, setup: bool = True) -> None:
     """在事件循环内初始化 saver（main lifespan 调用，失败即终止启动）"""
     global _pg_pool, _pg_saver
     from backend.db.dialect import is_postgres
     if is_postgres():
         try:
+            from backend.config import get_settings
+            from psycopg import AsyncConnection
             from psycopg_pool import AsyncConnectionPool
             from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+            settings = get_settings()
+            if setup:
+                # Schema changes use the existing migration identity. Runtime
+                # pools keep the restricted application role used by Compose.
+                async with await AsyncConnection.connect(
+                    _pg_conninfo(settings.migration_database_url),
+                    autocommit=True, prepare_threshold=0, connect_timeout=10,
+                ) as migration_connection:
+                    await AsyncPostgresSaver(migration_connection).setup()
             _pg_pool = AsyncConnectionPool(
                 conninfo=_pg_conninfo(),
-                kwargs={"autocommit": True, "prepare_threshold": 0},
+                kwargs={"autocommit": True, "prepare_threshold": 0, "connect_timeout": 10},
                 min_size=1, max_size=8, open=False,
             )
             await _pg_pool.open()
+            await _pg_pool.wait(timeout=10)
             _pg_saver = AsyncPostgresSaver(_pg_pool)
-            await _pg_saver.setup()
             logger.info("memory.savers_initialized", count=1, backend="postgres", shared=True)
             return
         except Exception as ex:

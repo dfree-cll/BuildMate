@@ -15,6 +15,20 @@ _MAX_DELIVERY_ATTEMPTS = 3
 
 
 async def run() -> None:
+    from backend.core.memory import close_memory_savers, init_memory_savers
+    from backend.db.session import engine
+
+    try:
+        # Compose waits for the backend to migrate the database. This separate
+        # process still needs its own runtime pools before compiling QA graphs.
+        await init_memory_savers(setup=False)
+        await _consume()
+    finally:
+        await close_memory_savers()
+        await engine.dispose()
+
+
+async def _consume() -> None:
     import aio_pika
 
     settings = get_settings()

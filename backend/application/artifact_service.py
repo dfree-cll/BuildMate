@@ -65,8 +65,8 @@ class ArtifactService:
                 WHERE tenant_id=:tenant_id
                   AND kind=:kind AND filename=:filename AND sha256=:sha256
                   AND status='active'
-                  AND ((:project_id IS NULL AND project_id IS NULL)
-                       OR project_id=:project_id)
+                  AND ((CAST(:project_id AS TEXT) IS NULL AND project_id IS NULL)
+                       OR project_id=CAST(:project_id AS TEXT))
                 ORDER BY created_at ASC, id ASC
                 LIMIT 1
             """), {
@@ -226,7 +226,7 @@ class ArtifactService:
                 WHERE id=:id AND tenant_id=:tenant_id
                   AND (
                     project_id IS NULL
-                    OR (:project_id IS NOT NULL AND project_id=:project_id)
+                    OR (CAST(:project_id AS TEXT) IS NOT NULL AND project_id=CAST(:project_id AS TEXT))
                   )
             """), {
                 "id": artifact_id,

@@ -1,5 +1,6 @@
 # 排除本地数据/环境/构建产物
 .venv/
+.git/
 __pycache__/
 *.pyc
 node_modules/
@@ -11,13 +12,18 @@ buildmate.db
 *.log
 _server*.log
 .env
+.env.*
 # 本地上传、测试产物与开发缓存不属于镜像运行时输入；上传后由卷或对象存储提供。
 .pytest_cache/
+.pytest_tmp/
 .pytest_tmp_*/
+tests/
+frontend/tests/
 data/uploads/
 data/uploads_v2/
 data/generated/
 data/runtime/
-# 真实法规数据在容器启动时重新抓取
-data/knowledge_real/
+data/archive/
+data/deliveries/
+# 随仓库提供的知识文档由 seed_knowledge.py 显式导入，需保留在镜像中。
 vendor/

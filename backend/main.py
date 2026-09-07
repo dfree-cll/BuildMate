@@ -14,8 +14,10 @@ if sys.platform == "win32":
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StaticHTTPException
+from starlette.types import Scope
 
 from backend.config import get_settings
 from backend.core.logger import configure_logging, get_logger
@@ -215,6 +217,27 @@ async def metrics():
 
 
 # 前端静态页面（SSE 客户端）
+class FrontendStaticFiles(StaticFiles):
+    """Serve Vue history routes while preserving missing API and asset errors."""
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StaticHTTPException as exc:
+            # A browser refresh requests the client route directly. Only HTML
+            # navigation may fall back; a missing script/API must remain a 404.
+            accepts_html = "text/html" in Request(scope).headers.get("accept", "")
+            if (
+                exc.status_code != 404
+                or scope["method"] not in {"GET", "HEAD"}
+                or not accepts_html
+                or Path(path).suffix
+                or path.split("/", 1)[0] in {"api", "assets"}
+            ):
+                raise
+            return await super().get_response("index.html", scope)
+
+
 static_dir = Path(__file__).parent.parent / "frontend" / "static"
 if static_dir.exists():
-    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
+    app.mount("/", FrontendStaticFiles(directory=str(static_dir), html=True), name="static")

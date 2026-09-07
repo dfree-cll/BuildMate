@@ -65,7 +65,8 @@ async def insert_approval(
         "reason": reason,
         "created_by": normalized_actor,
         # SQLite CURRENT_TIMESTAMP only has second precision.  Gate order is
-        # auditable, so persist the application timestamp with microseconds.
-        "created_at": datetime.now(timezone.utc),
+        # auditable, so persist microseconds as UTC without tzinfo to match
+        # the shared DateTime column and PostgreSQL's asyncpg binding.
+        "created_at": datetime.now(timezone.utc).replace(tzinfo=None),
     })
     return approval_id

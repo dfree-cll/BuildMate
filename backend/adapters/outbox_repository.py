@@ -25,7 +25,10 @@ class OutboxRepository:
         / ``release`` so a late acknowledgement from an expired worker cannot
         mutate a lease owned by another worker.
         """
-        now = datetime.now(timezone.utc)
+        # ``DateTime`` columns in the shared schema are timestamp-without-time-zone
+        # on PostgreSQL.  Bind a naive UTC value so asyncpg does not reject an
+        # aware datetime while keeping lease comparisons in one timezone.
+        now = _utc_now_naive()
         expired = now - timedelta(seconds=max(10, lease_seconds))
         claimed: list[dict] = []
         async with engine.begin() as conn:
@@ -118,7 +121,7 @@ class OutboxRepository:
             """), {
                 "id": event_id,
                 "error": error[:1000],
-                "available_at": datetime.now(timezone.utc) + timedelta(seconds=max(1, delay_seconds)),
+                "available_at": _utc_now_naive() + timedelta(seconds=max(1, delay_seconds)),
                 **params,
             })
         return result.rowcount == 1
@@ -147,3 +150,9 @@ def _claim_predicate(
         params["claim_attempts"] = int(claim_attempts)
         clauses.append("attempts=:claim_attempts")
     return " AND ".join(clauses), params
+
+
+def _utc_now_naive() -> datetime:
+    """Return UTC without tzinfo for PostgreSQL ``DateTime`` columns."""
+
+    return datetime.now(timezone.utc).replace(tzinfo=None)

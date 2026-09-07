@@ -57,7 +57,7 @@ _WORKFLOW_RUN_COLUMNS = """
 _PROJECT_SCOPE_SQL = """
     AND (
         project_id IS NULL
-        OR (:project_id IS NOT NULL AND project_id=:project_id)
+        OR (CAST(:project_id AS TEXT) IS NOT NULL AND project_id=CAST(:project_id AS TEXT))
     )
 """
 

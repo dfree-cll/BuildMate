@@ -37,7 +37,8 @@ class ChatRepository:
                        created_at, updated_at, version
                 FROM chat_sessions_v2
                 WHERE id=:id AND tenant_id=:tenant_id
-                  AND ((:project_id IS NULL AND project_id IS NULL) OR project_id=:project_id)
+                  AND ((CAST(:project_id AS TEXT) IS NULL AND project_id IS NULL)
+                       OR project_id=CAST(:project_id AS TEXT))
                   AND created_by=:user_id
             """), {
                 "id": session_id, "tenant_id": context.tenant_id,
